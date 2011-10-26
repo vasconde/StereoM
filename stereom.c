@@ -1,6 +1,6 @@
 /*
- * FOTOES
- * Nome: fotoes.c
+ * StereoM
+ * Nome: stereom.c
  * Autor: vasco conde
  */
 
@@ -89,7 +89,7 @@ unsigned char **alocar_sub_matrix (unsigned char **m, int height, int width, int
   return sub;
 }
 
-void **libertar_sub_matrix (unsigned char **sub)
+void libertar_sub_matrix (unsigned char **sub)
 {
   free(sub);
 }
@@ -107,7 +107,7 @@ void cross_correlation (unsigned char **im, int him, int wim, unsigned char **t,
 	cc = coef_correlacao (window, t, ht, wt);
 	libertar_sub_matrix(window);
 	if (cc >= 0.99)
-	  printf("ENCONTROU:\n          H: %d   W: %d\n", i, j);
+	  printf("ENCONTROU: cc = %lf\n          H: %d   W: %d\n", cc, i, j);
       }
 }
 
@@ -146,11 +146,11 @@ int main (void)
 
   area_busca = alocar_sub_matrix (componente_foto (foto1, 'R'), height, width, 0+1, 6+1, 0+1, 6+1);
 
-  img_ascii ("R2.txt", componente_foto (foto1, 'R'), height, width);
-  img_ascii ("G2.txt", componente_foto (foto1, 'G'), height, width);
-  img_ascii ("B2.txt", componente_foto (foto1, 'B'), height, width);
+  img_ascii ("dados/R.txt", componente_foto (foto1, 'R'), height, width);
+  img_ascii ("dados/G.txt", componente_foto (foto1, 'G'), height, width);
+  img_ascii ("dados/B.txt", componente_foto (foto1, 'B'), height, width);
 
-  img_ascii ("sub.txt", area_busca, 7, 7);
+  img_ascii ("dados/sub.txt", area_busca, 7, 7);
 
   printf("MEDIA: %lf\n", im_media(componente_foto (foto1, 'R'), height, width));
   printf("DESVIO PADRAO: %lf\n", im_desvio_padrao(componente_foto (foto1, 'R'), height, width));

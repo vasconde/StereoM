@@ -1,3 +1,5 @@
 dados/
-*~
 test.sh
+stereom
+*.o
+*~
