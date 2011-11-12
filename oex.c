@@ -429,13 +429,13 @@ double oex_n_xy_d (int op, int i, p_oex_pfs pfs, p_oex_param param)
   switch(op)
     {
     case 1: /* Nx */
-      return R[0+0*3] * (X - param->Xo) + R[1+0*3] * (Y - param->Yo) + R[2+0*3] * (Z - param->Zo);
+      return R[0+0*3] * (X - param->Xo) + R[0+1*3] * (Y - param->Yo) + R[0+2*3] * (Z - param->Zo);
       break;
     case 2: /* Ny */
-      return R[0+1*3] * (X - param->Xo) + R[1+1*3] * (Y - param->Yo) + R[2+1*3] * (Z - param->Zo);
+      return R[1+0*3] * (X - param->Xo) + R[1+1*3] * (Y - param->Yo) + R[1+2*3] * (Z - param->Zo);
       break;
     case 3: /* D */
-      return R[0+2*3] * (X - param->Xo) + R[1+2*3] * (Y - param->Yo) + R[2+2*3] * (Z - param->Zo);
+      return R[2+0*3] * (X - param->Xo) + R[2+1*3] * (Y - param->Yo) + R[2+2*3] * (Z - param->Zo);
       break;
     }
   return 0;
@@ -467,16 +467,16 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
       /* dx/d */
 
       A[0+(i*2)*n] = - oin_param->c / pow(D,2) * 
-	(R[0+2*3]*Nx - R[0+0*3]*D);
+	(R[2+0*3]*Nx - R[0+0*3]*D);
       
       A[1+(i*2)*n] = - oin_param->c / pow(D,2) * 
-	(R[1+2*3]*Nx - R[1+0*3]*D);
+	(R[2+1*3]*Nx - R[0+1*3]*D);
 
       A[2+(i*2)*n] = - oin_param->c / pow(D,2) * 
-	(R[2+2*3]*Nx - R[2+0*3]*D);
+	(R[2+2*3]*Nx - R[0+2*3]*D);
 
       A[3+(i*2)*n] = - oin_param->c / D *
-	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[1+2*3] * Nx/D - (Y - param->Yo)*R[2+0*3] + (Z - param->Zo)*R[1+0*3]);
+	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3] * Nx/D - (Y - param->Yo)*R[0+2*3] + (Z - param->Zo)*R[0+1*3]);
 
       A[4+(i*2)*n] = - oin_param->c / D *
 	((Nx*cos(param->kappa) - Ny*sin(param->kappa))*Nx/D + D*cos(param->kappa));
@@ -485,17 +485,17 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
 
       /* dy/d */
       
-      A[0+((i*2)+1)*n] = oin_param->c / pow(D,2) * 
-	(R[0+2*3]*Ny - R[0+1*3]*D);
+      A[0+((i*2)+1)*n] = - oin_param->c / pow(D,2) * 
+	(R[2+0*3]*Ny - R[1+0*3]*D);
 
-      A[1+((i*2)+1)*n] = oin_param->c / pow(D,2) * 
-	(R[1+2*3]*Ny - R[1+1*3]*D);
+      A[1+((i*2)+1)*n] = - oin_param->c / pow(D,2) * 
+	(R[2+1*3]*Ny - R[1+1*3]*D);
 
-      A[2+((i*2)+1)*n] = oin_param->c / pow(D,2) * 
-	(R[2+2*3]*Ny - R[2+1*3]*D);
+      A[2+((i*2)+1)*n] = - oin_param->c / pow(D,2) * 
+	(R[2+2*3]*Ny - R[1+2*3]*D);
 
       A[3+((i*2)+1)*n] = - oin_param->c / D *
-	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[1+2*3] * Ny/D - (Y - param->Yo)*R[2+1*3] + (Z - param->Zo)*R[1+1*3]);
+	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3] * Ny/D - (Y - param->Yo)*R[1+2*3] + (Z - param->Zo)*R[1+1*3]);
 
       A[4+((i*2)+1)*n] = oin_param->c / D *
 	((Nx*cos(param->kappa) - Ny*sin(param->kappa))*Ny/D - D*sin(param->kappa));
@@ -639,7 +639,7 @@ int main (void)
   /*
    * Carregar dados
    */
-  oex_add_oin_param (oin_param, 2527.01371, 1041.17490, 782.66840);
+  oex_add_oin_param (oin_param, (2527.01371+2515.01405)/2.0, 1041.17490, 782.66840);
   oex_add_param (param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
   
   carrega_coo(terreno, 25*3, "dados/pfs_t.txt", 't');
