@@ -6,14 +6,14 @@ CFLAGS = -Wall -ansi
 
 all:stereom
 
-stereom:imagenslib.o stereom.o
-	$(CC) $(CFLAGS) -ljpeg -lm imagenslib.o stereom.o -o stereom
+stereom:photojpeglib.o stereom.o
+	$(CC) $(CFLAGS) -ljpeg -lm photojpeglib.o stereom.o -o stereom
 
-stereom.o:stereom.c imagenslib.h
+stereom.o:stereom.c photojpeglib.h
 	$(CC) $(CFLAGS) -c stereom.c -o stereom.o
 
-imagenslib.o:imagenslib.c
-	$(CC) $(CFLAGS) -c imagenslib.c -o imagenslib.o	
+photojpeglib.o:photojpeglib.c
+	$(CC) $(CFLAGS) -c photojpeglib.c -o photojpeglib.o	
 
 clean:
 	rm -rf *.o

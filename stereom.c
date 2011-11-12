@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "imagenslib.h"
+#include "photojpeglib.h"
 
 double im_media (unsigned char **im, int height, int width)
 {
@@ -115,8 +115,8 @@ int main (void)
 {
   char infilename[20];
   char infilenametemplate[20];
-  p_foto foto1 = NULL;
-  p_foto template = NULL;
+  p_ph_photo foto1 = NULL;
+  p_ph_photo template = NULL;
   
   unsigned char **area_busca;
 
@@ -128,8 +128,8 @@ int main (void)
   scanf("%s", infilenametemplate);
   /* infilename = "test.jpg"; */
   
-  foto1 = read_jpeg_file( infilename );
-  template = read_jpeg_file( infilenametemplate );
+  foto1 = ph_read_jpeg_file( infilename );
+  template = ph_read_jpeg_file( infilenametemplate );
 
   if( foto1 != NULL ) 
     {
@@ -141,28 +141,28 @@ int main (void)
       return -1;
     }
 
-  height = height_foto(foto1);
-  width = width_foto(foto1);  
+  height = ph_height_photo(foto1);
+  width = ph_width_photo(foto1);  
 
-  area_busca = alocar_sub_matrix (componente_foto (foto1, 'R'), height, width, 0+1, 6+1, 0+1, 6+1);
+  area_busca = alocar_sub_matrix (ph_componente_photo (foto1, 'R'), height, width, 0+1, 6+1, 0+1, 6+1);
 
-  img_ascii ("dados/R.txt", componente_foto (foto1, 'R'), height, width);
-  img_ascii ("dados/G.txt", componente_foto (foto1, 'G'), height, width);
-  img_ascii ("dados/B.txt", componente_foto (foto1, 'B'), height, width);
+  ph_img_ascii ("dados/R.txt", ph_componente_photo (foto1, 'R'), height, width);
+  ph_img_ascii ("dados/G.txt", ph_componente_photo (foto1, 'G'), height, width);
+  ph_img_ascii ("dados/B.txt", ph_componente_photo (foto1, 'B'), height, width);
 
-  img_ascii ("dados/sub.txt", area_busca, 7, 7);
+  ph_img_ascii ("dados/sub.txt", area_busca, 7, 7);
 
-  printf("MEDIA: %lf\n", im_media(componente_foto (foto1, 'R'), height, width));
-  printf("DESVIO PADRAO: %lf\n", im_desvio_padrao(componente_foto (foto1, 'R'), height, width));
-  printf("COVARIANCIA: %lf\n", im_covariancia(componente_foto (foto1, 'R'),componente_foto (foto1, 'R'), height, width));
-  printf("COEF. CORR.: %lf\n", coef_correlacao(componente_foto (foto1, 'R'),componente_foto (foto1, 'R'), height, width));
+  printf("MEDIA: %lf\n", im_media(ph_componente_photo (foto1, 'R'), height, width));
+  printf("DESVIO PADRAO: %lf\n", im_desvio_padrao(ph_componente_photo (foto1, 'R'), height, width));
+  printf("COVARIANCIA: %lf\n", im_covariancia(ph_componente_photo (foto1, 'R'),ph_componente_photo (foto1, 'R'), height, width));
+  printf("COEF. CORR.: %lf\n", coef_correlacao(ph_componente_photo (foto1, 'R'),ph_componente_photo (foto1, 'R'), height, width));
 
-  cross_correlation (componente_foto (foto1, 'R'), height, width, 
-		     componente_foto (template, 'R'), height_foto(template), width_foto(template));
+  cross_correlation (ph_componente_photo (foto1, 'R'), height, width, 
+		     ph_componente_photo (template, 'R'), ph_height_photo(template), ph_width_photo(template));
 
   
 
-  libertar_foto(foto1);
+  ph_libertar_photo(foto1);
 
   printf("INFO: Fim de Programa\n");
   return 0;

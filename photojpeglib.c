@@ -1,6 +1,6 @@
 /*
- * Implementacao da IMAGENSLIB
- * Nome: imagenslib.c
+ * Implementacao da PHOTOJPEGLIB
+ * Nome: photojpeglib.c
  * Autor: vasco conde
  */
 
@@ -12,9 +12,9 @@
 
 #include <jpeglib.h> /* operacoes sobre o formato jpeg  */
 
-#include "imagenslib.h"
+#include "photojpeglib.h"
 
-struct foto
+struct ph_photo
 {
   int height;
   int width;
@@ -25,13 +25,13 @@ struct foto
 
 };
 
-struct par_foto
+struct ph_par_photo
 {
-  p_foto foto1;
-  p_foto foto2;
+  p_ph_photo photo1;
+  p_ph_photo photo2;
 };
 
-p_foto read_jpeg_file(char *filename)
+p_ph_photo ph_read_jpeg_file(char *filename)
 {
   unsigned char *raw_image = NULL; /* ponteiro para a imagem descompressa R,G,B,R,G,B... */
   int width;
@@ -49,7 +49,7 @@ p_foto read_jpeg_file(char *filename)
 
   int c, j; /* temp */
 
-  p_foto foto1;
+  p_ph_photo photo1;
 
   unsigned long location = 0;
   int i = 0;
@@ -72,7 +72,7 @@ p_foto read_jpeg_file(char *filename)
   width = cinfo.image_width;
   height = cinfo.image_height;
 
-  foto1 = alocar_foto(height,width);
+  photo1 = ph_alocar_photo(height,width);
   
   /* Apresentacao de alguns dados sobre o ficheiro */
   printf( "INFO: JPEG File Information: \n" );
@@ -100,11 +100,11 @@ p_foto read_jpeg_file(char *filename)
 	  raw_image[location++] = row_pointer[0][i];
 	  
 	  if (c == 0)
-	    foto1->R[cinfo.output_scanline-1][j] = raw_image[location-1];
+	    photo1->R[cinfo.output_scanline-1][j] = raw_image[location-1];
 	  else if (c == 1)
-	    foto1->G[cinfo.output_scanline-1][j] = raw_image[location-1];
+	    photo1->G[cinfo.output_scanline-1][j] = raw_image[location-1];
 	  else
-	    foto1->B[cinfo.output_scanline-1][j++] = raw_image[location-1];
+	    photo1->B[cinfo.output_scanline-1][j++] = raw_image[location-1];
 	  c++; /* temp */
 	}
     }
@@ -117,34 +117,34 @@ p_foto read_jpeg_file(char *filename)
   fclose( infile );
 
   /* termina com sucesso */
-  return foto1;
+  return photo1;
 }
 
-/* alocacao de de memoria para R G B e retorno de um elemento pFoto*/
-/*p_foto alocar_foto (int height)*/
+/* alocacao de de memoria para R G B e retorno de um elemento pPhoto*/
+/*p_photo alocar_photo (int height)*/
 
 /* m * n */
-unsigned char **alocar_mb (int m, int n)
+unsigned char **ph_alocar_m (int h, int w)
 {
   unsigned char **v;  /* ponteiro para a matriz */
   int i;    /* variavel auxiliar      */
 
-  if (m < 1 || n < 1) /* verifica parametros recebidos */
+  if (h < 1 || w < 1) /* verifica parametros recebidos */
     { 
       printf ("** Erro: Parametro invalido **\n");
       return (NULL);
     }
   /* aloca as linhas da matriz */
-  v = (unsigned char **) calloc (m, sizeof(unsigned char *));
+  v = (unsigned char **) calloc (h, sizeof(unsigned char *));
   if (v == NULL) 
     {
       printf ("** Erro: Memoria Insuficiente **");
       return (NULL);
     }
   /* aloca as colunas da matriz */
-  for ( i = 0; i < m; i++ ) 
+  for ( i = 0; i < h; i++ ) 
     {
-      v[i] = (unsigned char*) calloc (n, sizeof(unsigned char));
+      v[i] = (unsigned char*) calloc (w, sizeof(unsigned char));
       if (v[i] == NULL) 
 	{
 	  printf ("** Erro: Memoria Insuficiente **");
@@ -154,99 +154,99 @@ unsigned char **alocar_mb (int m, int n)
   return (v); /* retorna o ponteiro para a matriz */
 }
 
-unsigned char **libertar_mb (int m, int n, unsigned char **img)
+unsigned char **ph_libertar_m (int h, int w, unsigned char **img)
 {
   int  i;  /* variavel auxiliar */
   if (img == NULL) 
     return (NULL);
-  if (m < 1 || n < 1) {  /* verifica parametros recebidos */
+  if (h < 1 || w < 1) {  /* verifica parametros recebidos */
     printf ("** Erro: Parametro invalido **\n");
     return (img);
   }
-  for (i=0; i<m; i++) 
+  for (i=0; i<h; i++) 
     free (img[i]); /* libera as linhas da matriz */
   free (img);      /* libera a matriz */
   return (NULL); /* retorna um ponteiro nulo */
 }
 
-p_foto alocar_foto (int height, int width)
+p_ph_photo ph_alocar_photo (int height, int width)
 {
-  p_foto foto_alocada = (p_foto)malloc(sizeof(struct foto));
+  p_ph_photo photo_alocada = (p_ph_photo)malloc(sizeof(struct ph_photo));
 
-  unsigned char **R = alocar_mb(height,width);
-  unsigned char **G = alocar_mb(height,width);
-  unsigned char **B = alocar_mb(height,width);
+  unsigned char **R = ph_alocar_m(height,width);
+  unsigned char **G = ph_alocar_m(height,width);
+  unsigned char **B = ph_alocar_m(height,width);
 
-  foto_alocada->R = R;
-  foto_alocada->G = G;
-  foto_alocada->B = B;
+  photo_alocada->R = R;
+  photo_alocada->G = G;
+  photo_alocada->B = B;
 
-  foto_alocada->height = height;
-  foto_alocada->width = width;
+  photo_alocada->height = height;
+  photo_alocada->width = width;
 
-  return foto_alocada;  
+  return photo_alocada;  
 }
 
-void libertar_foto (p_foto foto_alocada)
+void ph_libertar_photo (p_ph_photo photo_alocada)
 {
-  int height = foto_alocada->height;
-  int width = foto_alocada->width;
+  int height = photo_alocada->height;
+  int width = photo_alocada->width;
 
-  libertar_mb(height, width, foto_alocada->R);
-  libertar_mb(height, width, foto_alocada->G);
-  libertar_mb(height, width, foto_alocada->B);
+  ph_libertar_m(height, width, photo_alocada->R);
+  ph_libertar_m(height, width, photo_alocada->G);
+  ph_libertar_m(height, width, photo_alocada->B);
 
-  free(foto_alocada);
+  free(photo_alocada);
 } 
 
-p_par_foto alocar_par_foto (p_foto foto1, p_foto foto2)
+p_ph_par_photo ph_alocar_par_photo (p_ph_photo photo1, p_ph_photo photo2)
 {
-  p_par_foto par_foto_alocada = (p_par_foto)malloc(sizeof(struct par_foto));
+  p_ph_par_photo par_photo_alocada = (p_ph_par_photo)malloc(sizeof(struct ph_par_photo));
 
-  par_foto_alocada->foto1 = foto1;
-  par_foto_alocada->foto2 = foto2;
+  par_photo_alocada->photo1 = photo1;
+  par_photo_alocada->photo2 = photo2;
 
-  return par_foto_alocada;
+  return par_photo_alocada;
 }
 
-void libertar_par_foto (p_par_foto par)
+void ph_libertar_par_photo (p_ph_par_photo par)
 {
-  libertar_foto (par->foto1);
-  libertar_foto (par->foto2);
+  ph_libertar_photo (par->photo1);
+  ph_libertar_photo (par->photo2);
 
   free(par);
 }
 
-unsigned char **componente_foto (p_foto foto, char nome_comp)
+unsigned char **ph_componente_photo (p_ph_photo photo, char nome_comp)
 {
   unsigned char **componente = NULL;
   switch(nome_comp)
     {
     case 'R':
-      componente = foto->R;
+      componente = photo->R;
       break;
     case 'G':
-      componente = foto->G;
+      componente = photo->G;
       break;
     case 'B':
-      componente = foto->B;
+      componente = photo->B;
       break;
     }
   return componente;
 }
 
 
-int height_foto (p_foto foto)
+int ph_height_photo (p_ph_photo photo)
 {
-  return foto->height;
+  return photo->height;
 }
 
-int width_foto (p_foto foto)
+int ph_width_photo (p_ph_photo photo)
 {
-  return foto->width;
+  return photo->width;
 }
 
-void img_ascii (char *filename, unsigned char **img, int height, int width)
+void ph_img_ascii (char *filename, unsigned char **img, int height, int width)
 {
   FILE *cR = fopen(filename, "w"); /* temp */
   int i,j;

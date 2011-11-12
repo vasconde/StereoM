@@ -1,5 +1,7 @@
 dados/
 test.sh
 stereom
+oex
 *.o
+*.txt
 *~
