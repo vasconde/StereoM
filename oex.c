@@ -58,11 +58,17 @@ double *oex_alocar_M_I(int n)
   return M;
 }
 
+/*
+ * altera um valor pontual valor da matriz M
+ */
 void oex_set_entry_M(double *M, int n, int i, int j, double val)
 {
   M[j+i*n] = val;
 }
 
+/*
+ * retorna um valor pontual da matriz M
+ */
 double oex_get_entry_M(const double *M, int n, int i, int j)
 {
   return M[j+i*n];
@@ -102,8 +108,9 @@ double *oex_AB (double *A, const int ma, const int na, double *B, const int mb, 
   return C;
 }
 
-/*Multiplicacao de matrizes com opcao de transposicao*/
-
+/*
+ * Multiplicacao de matrizes com opcao de transposicao
+*/
 double *oex_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, int tb, double *C)
 {
   int aux;
@@ -136,7 +143,6 @@ double *oex_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, 
 /*
  * Inversa da matriz M usando a LAPACK
  */
-
 /* LU decomoposition of a general matrix - from LAPACK*/
 void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
   
@@ -162,7 +168,6 @@ void oex_invM(double* A, int N)
 /*
  * transposta
  */
-
 void oex_Mt (double *M, int m, int n, double *Mt)
 {
   int i, j;
@@ -174,7 +179,6 @@ void oex_Mt (double *M, int m, int n, double *Mt)
 /*
  * Multiplicacao de uma matriz por um escalar
  */
-
 void oex_aM (double a, double *M, int m, int n)
 {
   int i;
@@ -212,6 +216,7 @@ void showm (double *M, int m, int n)
     }
 }
 
+/*passa para a memoria a matriz de um ficheiro ascii*/
 void readm (char *nfile, double *M, int m, int n)
 {
   int i, j, k=0;
@@ -224,6 +229,7 @@ void readm (char *nfile, double *M, int m, int n)
   fclose(f);
 }
 
+/*carrega as coordenadas de uma lista ascii para uma matriz*/
 void carrega_coo(double *coo, int dim, char *nfile, char tipo)
 {
   int i;
@@ -310,7 +316,9 @@ void oex_libertar_pfs (p_oex_pfs e)
   free(e);
 }
 
-/* Matriz de rotacao */
+/* 
+ * Calcula a matriz de rotacao 
+ */
 void oex_M_rot (double *R, double omega, double phi, double kappa, int op)
 {
   double *Ro = oex_alocar_M_zeros (3, 3);
@@ -352,6 +360,9 @@ void oex_M_rot (double *R, double omega, double phi, double kappa, int op)
   oex_free_M (Aux);
 }
 
+/*
+ * Adiciona os parametros de orientacao interna
+ */
 void oex_add_oin_param (p_oex_oin_param oin_param, double c, double xo, double yo)
 {
   oin_param->c = c;
@@ -359,6 +370,9 @@ void oex_add_oin_param (p_oex_oin_param oin_param, double c, double xo, double y
   oin_param->yo = yo;  
 }
 
+/*
+ * Adiciona os parametros de orientacao externa
+ */
 void oex_add_param (p_oex_param param, double Xo, double Yo, double Zo, double omega, double phi, double kappa, int opR)
 {
   double *R = oex_alocar_M_zeros (3, 3);
@@ -375,6 +389,9 @@ void oex_add_param (p_oex_param param, double Xo, double Yo, double Zo, double o
   param->R = R;
 }
 
+/*
+ * Adiciona pfs
+ */
 void oex_add_pfs (p_oex_pfs pfs, int n_pfs, double *terreno, double *foto)
 {
   pfs->n_pfs = n_pfs;
@@ -382,6 +399,9 @@ void oex_add_pfs (p_oex_pfs pfs, int n_pfs, double *terreno, double *foto)
   pfs->foto = foto;  
 }
 
+/*
+ * Modifica os parametros de orientacao externa
+ */
 void oex_set_param (p_oex_param param, double Xo, double Yo, double Zo, double omega, double phi, double kappa, int opR)
 {
   param->Xo = Xo;
@@ -394,11 +414,10 @@ void oex_set_param (p_oex_param param, double Xo, double Yo, double Zo, double o
   oex_M_rot (param->R, omega, phi, kappa, opR);
 } 
 
-
-
-
-/*Matriz A*/
-
+/*
+ * retorna as componetes Nx, Ny e D
+ * das equacoes de colinearidade
+ */
 double oex_n_xy_d (int op, int i, p_oex_pfs pfs, p_oex_param param)
 {
   double X = pfs->terreno[i*3];
@@ -421,6 +440,10 @@ double oex_n_xy_d (int op, int i, p_oex_pfs pfs, p_oex_param param)
     }
   return 0;
 }
+
+/*
+ * Matriz A
+ */
 
 void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_param param)
 {
@@ -481,6 +504,9 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
     }
 }
 
+/*
+ * Matriz de fecho
+ */
 void oex_Mfecho (p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_param param, double *W)
 {
 
@@ -498,6 +524,10 @@ void oex_Mfecho (p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_param param, do
     }
 }
 
+/*
+ * Actualiza a matriz dos parametros X
+ * com os valores da estrutura de dados param
+ */
 void oex_param2X (p_oex_param param, double *X)
 {
   X[0] = param->Xo;
@@ -508,16 +538,18 @@ void oex_param2X (p_oex_param param, double *X)
   X[5] = param->kappa;
 }
 
+/*
+ * Actualiza os valores da estrutura de dados param
+ * com os valor da matriz de parametros X
+ */
 void oex_X2param (double *X, p_oex_param param)
 {
-  param->Xo = X[0];
-  param->Yo = X[1];
-  param->Zo = X[2];
-  param->omega = X[3];
-  param->phi = X[4];
-  param->kappa = X[5];
+  oex_set_param (param, X[0], X[1], X[2], X[3], X[4], X[5], 1);
 }
 
+/*
+ * Calcula a norma de uma matriz M
+ */
 double oex_norm_M (double *M, int m, int n)
 {
   int i;
@@ -527,6 +559,11 @@ double oex_norm_M (double *M, int m, int n)
   return sqrt(norm);
 }
 
+/*
+ * Transforma as coordenadas imagem
+ * de: origen canto superior esquerdo e eixos (X >;Y v) 
+ * para: origem centro da imagem e eixos (X >;Y ^) 
+ */
 void oex_transfotopfs (p_oex_oin_param oin_param, p_oex_pfs pfs)
 {
   int i;
@@ -541,6 +578,28 @@ void oex_transfotopfs (p_oex_oin_param oin_param, p_oex_pfs pfs)
     }
 }
 
+void oex_M_ascii (char *filename, double *M, int m, int n)
+{
+  FILE *cR = fopen(filename, "w"); /* temp */
+  int i,j;
+
+  if (!cR)
+    {
+      printf("ERRO: Na escrita no ficheiro %s\n!", filename);
+    }
+
+  for(i=0; i < m; i++)
+    {
+      for(j = 0; j < n; j++)
+	fprintf(cR,"%lf ", M[j+i*n]);
+      fprintf(cR,"\n");
+    }
+  fclose(cR);
+}
+
+/*
+ * MAIN
+ */
 int main (void)
 {
   /*
@@ -551,7 +610,8 @@ int main (void)
   int n0 = 3;              /* numero de PFS minimo */
   int u = 6;               /* numero de parametros */
   double var0 = 1.0;       /* var a priori */
-  double d2r = (4.0*atan(1.0))/180;
+  
+  /*double d2r = (4.0*atan(1.0))/180;*/
 
   double *L = oex_alocar_M(n * 2, 1);
   double *V = oex_alocar_M(n * 2, 1);
@@ -580,7 +640,7 @@ int main (void)
    * Carregar dados
    */
   oex_add_oin_param (oin_param, 2527.01371, 1041.17490, 782.66840);
-  oex_add_param (param, 3, 1, 9, 0, 0, 0.0, 1);
+  oex_add_param (param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
   
   carrega_coo(terreno, 25*3, "dados/pfs_t.txt", 't');
   carrega_coo(foto, 25*2, "dados/pfs_f.txt", 'f');
@@ -589,7 +649,7 @@ int main (void)
 
   oex_transfotopfs (oin_param, pfs);
 
-  showm (pfs->foto, 25, 2);
+  showm (pfs->foto, 25, 2); /*temp*/
 
   /*
    * Ajustamento
@@ -603,12 +663,20 @@ int main (void)
   oex_param2X (param, X);
 
   do {
-    showm (X, u, 1);
+    showm (X, u, 1); /*temp*/
+
     printf("* * * * * *\n");
     scanf("%d", &n0);
+    if(n0 == 0)
+      return 1;
 
     oex_designM (A, oin_param, pfs, param);
     oex_Mfecho (oin_param, pfs, param, W);
+
+    /*
+    oex_M_ascii ("dados/A.txt", A, n * 2, u);
+    oex_M_ascii ("dados/W.txt", W, n * 2, 1);
+    */
 
     oex_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
     oex_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, InvN);  
@@ -616,13 +684,19 @@ int main (void)
     oex_aM (-1.0, InvN, u, u);
     oex_ABtt (InvN, u, u, 0, A, n * 2, u, 1, Aux);
     oex_ABtt (Aux, u, n * 2, 0, Pl, n * 2, n * 2, 0, Aux2); 
-    oex_ABtt (Aux2, u, n * 2, 0, W, n * 2, 1, 0, D); 
-    
+    oex_ABtt (Aux2, u, n * 2, 0, W, n * 2, 1, 0, D);
+
+    /*
+    oex_M_ascii ("dados/D.txt", D, u, 1);
+    oex_M_ascii ("dados/X.txt", X, u, 1);
+    */
+
     oex_AmmB (0, X, D, u, 1, Aux3);
 
     oex_AeqB (X, Aux3, u, 1);
 
     oex_X2param (X, param);
+    
   } while(oex_norm_M (D, u, 1) > 0.001);
 
   
