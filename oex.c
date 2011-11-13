@@ -478,7 +478,7 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
       A[3+(i*2)*n] = - oin_param->c / D *
 	(((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3]) * Nx/D - (Y - param->Yo)*R[0+2*3] + (Z - param->Zo)*R[0+1*3]);
 
-      A[4+(i*2)*n] = - oin_param->c / D *
+      A[4+(i*2)*n] = oin_param->c / D *
 	((Nx*cos(param->kappa) - Ny*sin(param->kappa))*Nx/D + D*cos(param->kappa));
       
       A[5+(i*2)*n] = - oin_param->c / D * Ny;
@@ -608,9 +608,13 @@ int main (void)
    */
   int n = 25;              /* Numero de PFS 1/2 de observacoes */
   int n0 = 3;              /* numero de PFS minimo */
+  int df = n*2 - n0*2;
   int u = 6;               /* numero de parametros */
+  int it = 0;              /* numero de iteracoes */
+  int i;
   double var0 = 1.0;       /* var a priori */
-  
+  double var0_;            /* var a posteriori */
+
   /*double d2r = (4.0*atan(1.0))/180;*/
 
   double *L = oex_alocar_M(n * 2, 1);
@@ -626,6 +630,8 @@ int main (void)
   double *Aux = oex_alocar_M(u, n * 2);
   double *Aux2 = oex_alocar_M(u, n * 2);
   double *Aux3 = oex_alocar_M(u, 1);
+  double *Aux4 = oex_alocar_M(n * 2, 1);
+  double *Aux5 = oex_alocar_M(1, n * 2);
   
   p_oex_oin_param oin_param = oex_alocar_oin_param ();
   p_oex_param param = oex_alocar_param ();
@@ -649,8 +655,6 @@ int main (void)
 
   oex_transfotopfs (oin_param, pfs);
 
-  showm (pfs->foto, 25, 2); /*temp*/
-
   /*
    * Ajustamento
    */
@@ -663,21 +667,14 @@ int main (void)
   oex_param2X (param, X);
 
   do {
-    showm (X, u, 1); /*temp*/
 
-    printf("* * * * * *\n");
-    scanf("%d", &n0);
-    if(n0 == 0)
-      return 1;
-
+    /*matriz A*/
     oex_designM (A, oin_param, pfs, param);
+    
+    /*matriz de fecho */
     oex_Mfecho (oin_param, pfs, param, W);
 
-    /*
-    oex_M_ascii ("dados/A.txt", A, n * 2, u);
-    oex_M_ascii ("dados/W.txt", W, n * 2, 1);
-    */
-
+    /*matriz delta*/
     oex_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
     oex_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, InvN);  
     oex_invM(InvN, u);
@@ -686,18 +683,50 @@ int main (void)
     oex_ABtt (Aux, u, n * 2, 0, Pl, n * 2, n * 2, 0, Aux2); 
     oex_ABtt (Aux2, u, n * 2, 0, W, n * 2, 1, 0, D);
 
-    /*
-    oex_M_ascii ("dados/D.txt", D, u, 1);
-    oex_M_ascii ("dados/X.txt", X, u, 1);
-    */
-
+    /*matriz dos parametros ajustados*/
     oex_AmmB (0, X, D, u, 1, Aux3);
-
     oex_AeqB (X, Aux3, u, 1);
 
+    /*actualizacao dos param*/
     oex_X2param (X, param);
     
-  } while(oex_norm_M (D, u, 1) > 0.001);
+    it++; 
+
+  } while(oex_norm_M (D, u, 1) > 0.0001 && it <= 10);
+
+
+  /*matriz de residuos*/
+  oex_AB (A, n*2, u, D, u, 1, Aux4);
+  oex_AmmB (0, Aux4, W, n*2, 1, V);
+
+  /*matriz de V&C dos parametros ajustados*/
+  oex_designM (A, oin_param, pfs, param);
+  oex_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
+  oex_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, Cx);  
+  oex_invM(Cx, u);
+  oex_aM (var0, Cx, u, u);
+
+  /*var a posteriori*/
+  oex_ABtt (V, n*2, 1, 1, Pl, n * 2, n * 2, 0, Aux5);
+  oex_AB (Aux5, 1, n * 2, V, n * 2, 1, &var0_);
+  var0_ /= df;
+
+
+  printf("\nINFO: %d iteracoes\n", it);
+
+  printf("\nINFO: variancia de referencia: %lf \n", var0);
+
+  printf("\nINFO: variancia de referencia a posteriori: %lf \n", var0_);
+
+  printf("\nINFO: Parametros ajustados:\n\n");
+  showm(X, u, 1);
+  printf("\nINFO: Respectivas incertezas:\n\n");
+  for(i = 0; i < u; i++)
+    {
+      printf("%lf\n", sqrt(Cx[i+i*u]));
+    }
+  printf("\nINFO: Residuos:\n\n");
+  showm(V, n*2, 1);
 
   /*showm (Pl, n*2, n*3);*/
 
@@ -716,6 +745,9 @@ int main (void)
   oex_free_M(InvN);
   oex_free_M(Aux);
   oex_free_M(Aux2);
+  oex_free_M(Aux3);
+  oex_free_M(Aux4);
+  oex_free_M(Aux5);
 
   oex_libertar_oin_param (oin_param);
   oex_libertar_param (param);
