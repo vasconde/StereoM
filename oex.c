@@ -476,7 +476,7 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
 	(R[2+2*3]*Nx - R[0+2*3]*D);
 
       A[3+(i*2)*n] = - oin_param->c / D *
-	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3] * Nx/D - (Y - param->Yo)*R[0+2*3] + (Z - param->Zo)*R[0+1*3]);
+	(((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3]) * Nx/D - (Y - param->Yo)*R[0+2*3] + (Z - param->Zo)*R[0+1*3]);
 
       A[4+(i*2)*n] = - oin_param->c / D *
 	((Nx*cos(param->kappa) - Ny*sin(param->kappa))*Nx/D + D*cos(param->kappa));
@@ -495,7 +495,7 @@ void oex_designM (double *A, p_oex_oin_param oin_param, p_oex_pfs pfs, p_oex_par
 	(R[2+2*3]*Ny - R[1+2*3]*D);
 
       A[3+((i*2)+1)*n] = - oin_param->c / D *
-	((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3] * Ny/D - (Y - param->Yo)*R[1+2*3] + (Z - param->Zo)*R[1+1*3]);
+	(((Y - param->Yo)*R[2+2*3] - (Z - param->Zo)*R[2+1*3]) * Ny/D - (Y - param->Yo)*R[1+2*3] + (Z - param->Zo)*R[1+1*3]);
 
       A[4+((i*2)+1)*n] = oin_param->c / D *
 	((Nx*cos(param->kappa) - Ny*sin(param->kappa))*Ny/D - D*sin(param->kappa));
@@ -698,8 +698,6 @@ int main (void)
     oex_X2param (X, param);
     
   } while(oex_norm_M (D, u, 1) > 0.001);
-
-  
 
   /*showm (Pl, n*2, n*3);*/
 
