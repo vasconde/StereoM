@@ -13,194 +13,12 @@
  */
 #include <stdio.h>   /* c padrao */
 #include <stdlib.h>  /* c padrao */
-#include <math.h>    /* c padrao */
-#include <cblas.h>   /* c BLAS   */
+#include <math.h>   /* c padrao */
+/*#include <cblas.h>*/   /* c BLAS   */
+#include "matrixlib.h"
 
 /*#include "oex.h"*/
 
-/*** ALOCACAO E OPERACOES DE MATRIZES ***/
-
-/*
- * Alocacao de uma matriz
- */
-double *oex_alocar_M (int m, int n)
-{
-  double *M = (double *)calloc(m*n,sizeof(double));
-  return M;
-}
-
-/*
- * Alocacao de uma matriz a zeros
- */
-double *oex_alocar_M_zeros (int m, int n)
-{
-  double *M = oex_alocar_M (m, n);
-  int num = m*n;
-  int i;
-
-  for(i = 0; i < num; i++)
-    M[i] = 0;
-
-  return M;
-}
-
-/*
- * Alocacao de uma matriz identidade
- */
-double *oex_alocar_M_I(int n)
-{
-  double *M = oex_alocar_M_zeros (n,n);
-  int i;
-
-  for(i=0; i<n; i++)
-    M[i+(n*i)] = 1.0;
-
-  return M;
-}
-
-/*
- * altera um valor pontual valor da matriz M
- */
-void oex_set_entry_M(double *M, int n, int i, int j, double val)
-{
-  M[j+i*n] = val;
-}
-
-/*
- * retorna um valor pontual da matriz M
- */
-double oex_get_entry_M(const double *M, int n, int i, int j)
-{
-  return M[j+i*n];
-}
-
-/* 
- * Libertar matriz da memoria
- */
-void oex_free_M (double *M)
-{
-  free(M);
-}
-
-/*
- * Copiar de A para B
- */
-void oex_AeqB (double *A, double *B, int m, int n)
-{
-  int i;
-  int dim = m * n;
-  for (i = 0; i < dim; i++)
-    {
-      A[i] = B[i];
-    }
-}
-
-/*
- * Multiplicacao de duas Matrizes usando a BLAS
- */
-double *oex_AB (double *A, const int ma, const int na, double *B, const int mb, const int nb, double *C)
-{
-  if(na != mb)
-    return NULL;
-
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ma, nb, na, 1.0, A, na, B, nb, 0.0, C, nb);
-
-  return C;
-}
-
-/*
- * Multiplicacao de matrizes com opcao de transposicao
-*/
-double *oex_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, int tb, double *C)
-{
-  int aux;
-  int saltoa = na, saltob = nb, saltoc = nb;
-
-  enum CBLAS_ORDER transposeA = CblasNoTrans;
-  enum CBLAS_ORDER transposeB = CblasNoTrans;
-
-  if(ta != 0)
-    {
-      transposeA = CblasTrans;
-      aux = ma;
-      ma = na;
-      na = aux;
-    }
-  if(tb != 0)
-    {
-      saltoc = mb;
-      transposeB = CblasTrans;
-      aux = mb;
-      mb = nb;
-      nb = aux;
-    }
-
-  cblas_dgemm(CblasRowMajor, transposeA, transposeB, ma, nb, na, 1.0, A, saltoa, B, saltob, 0.0, C, saltoc);
-
-  return C;
-}
-
-/*
- * Inversa da matriz M usando a LAPACK
- */
-/* LU decomoposition of a general matrix - from LAPACK*/
-void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-  
-/* generate inverse of a matrix given its LU decomposition - from LAPACK*/
-void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-
-void oex_invM(double* A, int N)
-{
-  /*int *IPIV = new int[N+1];*/
-    int *IPIV = (int *)calloc(N+1,sizeof(int));
-    int LWORK = N*N;
-    /*double *WORK = new double[LWORK];*/
-    double *WORK = (double *)calloc(LWORK,sizeof(double));
-    int INFO;
-
-    dgetrf_(&N,&N,A,&N,IPIV,&INFO);
-    dgetri_(&N,A,&N,IPIV,WORK,&LWORK,&INFO);
-
-    free(IPIV);
-    free(WORK);
-}
-
-/*
- * transposta
- */
-void oex_Mt (double *M, int m, int n, double *Mt)
-{
-  int i, j;
-  for(i=0; i < m; i++)
-    for(j=0; j < n; j++)
-      Mt[i+j*m] = M[j+i*n];
-}
-
-/*
- * Multiplicacao de uma matriz por um escalar
- */
-void oex_aM (double a, double *M, int m, int n)
-{
-  int i;
-  int dim = m*n;
-  for(i=0; i < dim; i++)
-    M[i] *= a;
-}
-
-/*
- * Somar(op != 0) e subtrair (op = 0) duas matrizes
- */
-void oex_AmmB (int op, double *A, double *B, int m, int n, double *C)
-{
-  int i;
-  int dim = m*n;
-  if(!op)
-    for(i=0; i < dim; i++)
-      C[i] = A[i] + B[i];
-  else
-    for(i=0; i < dim; i++)
-      C[i] = A[i] - B[i];
-}
 
 /*** TEMPORARIAS ***/
 
@@ -211,7 +29,7 @@ void showm (double *M, int m, int n)
   for(i = 0; i < m; i++)
     {
       for(j = 0; j < n; j++)
-	printf("%.4lf ", M[j+i*n]);
+	printf("%.10lf ", M[j+i*n]);
       printf("\n");
     }
 }
@@ -321,43 +139,43 @@ void oex_libertar_pfs (p_oex_pfs e)
  */
 void oex_M_rot (double *R, double omega, double phi, double kappa, int op)
 {
-  double *Ro = oex_alocar_M_zeros (3, 3);
-  double *Rp = oex_alocar_M_zeros (3, 3);
-  double *Rk = oex_alocar_M_zeros (3, 3);
+  double *Ro = ml_alocar_M_zeros (3, 3);
+  double *Rp = ml_alocar_M_zeros (3, 3);
+  double *Rk = ml_alocar_M_zeros (3, 3);
 
-  double *Aux = oex_alocar_M (3,3);
+  double *Aux = ml_alocar_M (3,3);
 
   /* preenchimento das matrizes */
-  oex_set_entry_M(Ro, 3, 0, 0, 1);
-  oex_set_entry_M(Ro, 3, 1, 1, cos(omega));
-  oex_set_entry_M(Ro, 3, 1, 2, -sin(omega));
-  oex_set_entry_M(Ro, 3, 2, 1, sin(omega));
-  oex_set_entry_M(Ro, 3, 2, 2, cos(omega));
+  ml_set_entry_M(Ro, 3, 0, 0, 1);
+  ml_set_entry_M(Ro, 3, 1, 1, cos(omega));
+  ml_set_entry_M(Ro, 3, 1, 2, -sin(omega));
+  ml_set_entry_M(Ro, 3, 2, 1, sin(omega));
+  ml_set_entry_M(Ro, 3, 2, 2, cos(omega));
 
-  oex_set_entry_M(Rp, 3, 0, 0, cos(phi));
-  oex_set_entry_M(Rp, 3, 0, 2, sin(phi));
-  oex_set_entry_M(Rp, 3, 1, 1, 1);
-  oex_set_entry_M(Rp, 3, 2, 0, -sin(phi));
-  oex_set_entry_M(Rp, 3, 2, 2, cos(phi));
+  ml_set_entry_M(Rp, 3, 0, 0, cos(phi));
+  ml_set_entry_M(Rp, 3, 0, 2, sin(phi));
+  ml_set_entry_M(Rp, 3, 1, 1, 1);
+  ml_set_entry_M(Rp, 3, 2, 0, -sin(phi));
+  ml_set_entry_M(Rp, 3, 2, 2, cos(phi));
 
-  oex_set_entry_M(Rk, 3, 0, 0, cos(kappa));
-  oex_set_entry_M(Rk, 3, 0, 1, -sin(kappa));
-  oex_set_entry_M(Rk, 3, 1, 0, sin(kappa));
-  oex_set_entry_M(Rk, 3, 1, 1, cos(kappa));
-  oex_set_entry_M(Rk, 3, 2, 2, 1);
+  ml_set_entry_M(Rk, 3, 0, 0, cos(kappa));
+  ml_set_entry_M(Rk, 3, 0, 1, -sin(kappa));
+  ml_set_entry_M(Rk, 3, 1, 0, sin(kappa));
+  ml_set_entry_M(Rk, 3, 1, 1, cos(kappa));
+  ml_set_entry_M(Rk, 3, 2, 2, 1);
 
   switch(op)
     {
     case 1: /*omega phi kappa */
-      oex_AB (Ro, 3, 3, Rp, 3, 3, Aux);
-      oex_AB (Aux, 3, 3, Rk, 3, 3, R);
+      ml_AB (Ro, 3, 3, Rp, 3, 3, Aux);
+      ml_AB (Aux, 3, 3, Rk, 3, 3, R);
       break;
     }
 
-  oex_free_M (Ro);
-  oex_free_M (Rp);
-  oex_free_M (Rk);
-  oex_free_M (Aux);
+  ml_free_M (Ro);
+  ml_free_M (Rp);
+  ml_free_M (Rk);
+  ml_free_M (Aux);
 }
 
 /*
@@ -375,7 +193,7 @@ void oex_add_oin_param (p_oex_oin_param oin_param, double c, double xo, double y
  */
 void oex_add_param (p_oex_param param, double Xo, double Yo, double Zo, double omega, double phi, double kappa, int opR)
 {
-  double *R = oex_alocar_M_zeros (3, 3);
+  double *R = ml_alocar_M_zeros (3, 3);
 
   param->Xo = Xo;
   param->Yo = Yo;
@@ -623,21 +441,21 @@ int main (void)
 
   /*double d2r = (4.0*atan(1.0))/180;*/
 
-  double *L = oex_alocar_M(n * 2, 1);
-  double *V = oex_alocar_M(n * 2, 1);
-  double *X = oex_alocar_M(u, 1);
-  double *Cl = oex_alocar_M_I (n * 2);
-  double *Pl = oex_alocar_M (n * 2, n * 2);
-  double *A = oex_alocar_M (n * 2, u);
-  double *W = oex_alocar_M(n * 2, 1);
-  double *D = oex_alocar_M(u, 1);
-  double *Cx = oex_alocar_M(u, u);
-  double *InvN = oex_alocar_M(u, u);
-  double *Aux = oex_alocar_M(u, n * 2);
-  double *Aux2 = oex_alocar_M(u, n * 2);
-  double *Aux3 = oex_alocar_M(u, 1);
-  double *Aux4 = oex_alocar_M(n * 2, 1);
-  double *Aux5 = oex_alocar_M(1, n * 2);
+  double *L = ml_alocar_M(n * 2, 1);
+  double *V = ml_alocar_M(n * 2, 1);
+  double *X = ml_alocar_M(u, 1);
+  double *Cl = ml_alocar_M_I (n * 2);
+  double *Pl = ml_alocar_M (n * 2, n * 2);
+  double *A = ml_alocar_M (n * 2, u);
+  double *W = ml_alocar_M(n * 2, 1);
+  double *D = ml_alocar_M(u, 1);
+  double *Cx = ml_alocar_M(u, u);
+  double *InvN = ml_alocar_M(u, u);
+  double *Aux = ml_alocar_M(u, n * 2);
+  double *Aux2 = ml_alocar_M(u, n * 2);
+  double *Aux3 = ml_alocar_M(u, 1);
+  double *Aux4 = ml_alocar_M(n * 2, 1);
+  double *Aux5 = ml_alocar_M(1, n * 2);
   
   p_oex_oin_param oin_param = oex_alocar_oin_param ();
   p_oex_param param = oex_alocar_param ();
@@ -668,9 +486,9 @@ int main (void)
    */
 
   /*definicao dos pesos*/
-  oex_AeqB (Pl, Cl, n*2, n*2); /*Pl = Cl*/
-  oex_invM(Pl, n*2);           /*Pl = inv(Pl)*/
-  oex_aM (var0, Pl, n*2, n*2); /*Pl = var*Pl*/
+  ml_AeqB (Pl, Cl, n*2, n*2); /*Pl = Cl*/
+  ml_invM(Pl, n*2);           /*Pl = inv(Pl)*/
+  ml_aM (var0, Pl, n*2, n*2); /*Pl = var*Pl*/
 
   oex_param2X (param, X);
 
@@ -683,17 +501,17 @@ int main (void)
     oex_Mfecho (oin_param, pfs, param, W);
 
     /*matriz delta*/
-    oex_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
-    oex_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, InvN);  
-    oex_invM(InvN, u);
-    oex_aM (-1.0, InvN, u, u);
-    oex_ABtt (InvN, u, u, 0, A, n * 2, u, 1, Aux);
-    oex_ABtt (Aux, u, n * 2, 0, Pl, n * 2, n * 2, 0, Aux2); 
-    oex_ABtt (Aux2, u, n * 2, 0, W, n * 2, 1, 0, D);
+    ml_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
+    ml_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, InvN);  
+    ml_invM(InvN, u);
+    ml_aM (-1.0, InvN, u, u);
+    ml_ABtt (InvN, u, u, 0, A, n * 2, u, 1, Aux);
+    ml_ABtt (Aux, u, n * 2, 0, Pl, n * 2, n * 2, 0, Aux2); 
+    ml_ABtt (Aux2, u, n * 2, 0, W, n * 2, 1, 0, D);
 
     /*matriz dos parametros ajustados*/
-    oex_AmmB (0, X, D, u, 1, Aux3);
-    oex_AeqB (X, Aux3, u, 1);
+    ml_AmmB (0, X, D, u, 1, Aux3);
+    ml_AeqB (X, Aux3, u, 1);
 
     /*actualizacao dos param*/
     oex_X2param (X, param);
@@ -704,19 +522,19 @@ int main (void)
 
 
   /*matriz de residuos*/
-  oex_AB (A, n*2, u, D, u, 1, Aux4);
-  oex_AmmB (0, Aux4, W, n*2, 1, V);
+  ml_AB (A, n*2, u, D, u, 1, Aux4);
+  ml_AmmB (0, Aux4, W, n*2, 1, V);
 
   /*matriz de V&C dos parametros ajustados*/
   oex_designM (A, oin_param, pfs, param);
-  oex_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
-  oex_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, Cx);  
-  oex_invM(Cx, u);
-  oex_aM (var0, Cx, u, u);
+  ml_ABtt (A, n * 2, u, 1, Pl, n * 2, n * 2, 0, Aux);
+  ml_ABtt (Aux, u, n * 2, 0, A, n * 2, u, 0, Cx);  
+  ml_invM(Cx, u);
+  ml_aM (var0, Cx, u, u);
 
   /*var a posteriori*/
-  oex_ABtt (V, n*2, 1, 1, Pl, n * 2, n * 2, 0, Aux5);
-  oex_AB (Aux5, 1, n * 2, V, n * 2, 1, &var0_);
+  ml_ABtt (V, n*2, 1, 1, Pl, n * 2, n * 2, 0, Aux5);
+  ml_AB (Aux5, 1, n * 2, V, n * 2, 1, &var0_);
   var0_ /= df;
 
 
@@ -741,21 +559,21 @@ int main (void)
   /*
    * Libertar memoria
    */
-  oex_free_M(L);
-  oex_free_M(V);
-  oex_free_M(X);
-  oex_free_M(Cl);
-  oex_free_M(Pl);
-  oex_free_M(A);
-  oex_free_M(W);
-  oex_free_M(D);
-  oex_free_M(Cx);
-  oex_free_M(InvN);
-  oex_free_M(Aux);
-  oex_free_M(Aux2);
-  oex_free_M(Aux3);
-  oex_free_M(Aux4);
-  oex_free_M(Aux5);
+  ml_free_M(L);
+  ml_free_M(V);
+  ml_free_M(X);
+  ml_free_M(Cl);
+  ml_free_M(Pl);
+  ml_free_M(A);
+  ml_free_M(W);
+  ml_free_M(D);
+  ml_free_M(Cx);
+  ml_free_M(InvN);
+  ml_free_M(Aux);
+  ml_free_M(Aux2);
+  ml_free_M(Aux3);
+  ml_free_M(Aux4);
+  ml_free_M(Aux5);
 
   oex_libertar_oin_param (oin_param);
   oex_libertar_param (param);
