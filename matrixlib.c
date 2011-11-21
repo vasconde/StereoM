@@ -199,13 +199,13 @@ void ml_aM (double a, double *M, int m, int n)
 }
 
 /*
- * Somar(op != 0) e subtrair (op = 0) duas matrizes
+ * Somar(op == 0) e subtrair (op != 0) duas matrizes
  */
 void ml_AmmB (int op, double *A, double *B, int m, int n, double *C)
 {
   int i;
   int dim = m*n;
-  if(!op)
+  if(op == 0)
     for(i=0; i < dim; i++)
       C[i] = A[i] + B[i];
   else

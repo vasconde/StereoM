@@ -424,12 +424,12 @@ int main (void)
    * Definicao de variaveis
    * Alocacao de memoria
    */
-  const int n = 24-1-1-1-1-1;              /* Numero de PFS 1/2 de observacoes */
+  const int n = 14;              /* Numero de PFS 1/2 de observacoes */
   /* char * ffoto = "dados/pfs_f.txt";
      char * fterreno = "dados/pfs_t.txt"; */
 
-  char * ffoto = "dados/par/limpres/pfs_fl.txt";
-  char * fterreno = "dados/par/limpres/pfs_tl.txt";
+  char * ffoto = "dados/par/limpres/pfs_fr.txt";
+  char * fterreno = "dados/par/limpres/pfs_tr.txt";
 
   int n0 = 3;              /* numero de PFS minimo */
   int df = n*2 - n0*2;

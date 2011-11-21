@@ -44,3 +44,4 @@ clean:
 mrproper:clean
 	rm -rf stereom
 	rm -rf oex
+	rm -rf epipolar

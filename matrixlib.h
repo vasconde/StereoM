@@ -86,7 +86,7 @@ void ml_Mt (double *M, int m, int n, double *Mt);
 void ml_aM (double a, double *M, int m, int n);
 
 /*
- * Somar(op != 0) e subtrair (op = 0) duas matrizes
+ * Somar(op == 0) e subtrair (op != 0) duas matrizes
  */
 void ml_AmmB (int op, double *A, double *B, int m, int n, double *C);
 

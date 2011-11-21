@@ -30,7 +30,10 @@ void showm (double *M, int m, int n)
     }
 }
 
-int read_ascii_param (char* filen, double* T, double* Opk)
+/*** TEMPORARIAS ***/
+
+/* ler parametros x,y,x,omega,phi,kappa */
+int ep_read_ascii_param (char* filen, double* Param)
 {
   FILE *f = fopen(filen, "r");
 
@@ -40,11 +43,74 @@ int read_ascii_param (char* filen, double* T, double* Opk)
       return 1;
     }
 
-  fscanf(f,"%lf %lf %lf", &T[0], &T[1], &T[2]);
-  fscanf(f,"%lf %lf %lf", &Opk[0], &Opk[1], &Opk[2]);
+  fscanf(f,"%lf %lf %lf", &Param[0], &Param[1], &Param[2]);
+  fscanf(f,"%lf %lf %lf", &Param[3], &Param[4], &Param[5]);
 
   fclose(f);
   return 0;
+}
+
+/*
+ * Gera vector de translacao e rotacao de l -> r
+ * dX,dY,dZ,domega,dphi,dkappa
+ */
+
+/* Calcula a matriz de rotacao */
+void ep_M_rot (double *R, double omega, double phi, double kappa)
+{
+  double *Ro = ml_alocar_M_zeros (3, 3);
+  double *Rp = ml_alocar_M_zeros (3, 3);
+  double *Rk = ml_alocar_M_zeros (3, 3);
+
+  double *Aux = ml_alocar_M (3,3);
+
+  /* preenchimento das matrizes */
+  ml_set_entry_M(Ro, 3, 0, 0, 1);
+  ml_set_entry_M(Ro, 3, 1, 1, cos(omega));
+  ml_set_entry_M(Ro, 3, 1, 2, -sin(omega));
+  ml_set_entry_M(Ro, 3, 2, 1, sin(omega));
+  ml_set_entry_M(Ro, 3, 2, 2, cos(omega));
+
+  ml_set_entry_M(Rp, 3, 0, 0, cos(phi));
+  ml_set_entry_M(Rp, 3, 0, 2, sin(phi));
+  ml_set_entry_M(Rp, 3, 1, 1, 1);
+  ml_set_entry_M(Rp, 3, 2, 0, -sin(phi));
+  ml_set_entry_M(Rp, 3, 2, 2, cos(phi));
+
+  ml_set_entry_M(Rk, 3, 0, 0, cos(kappa));
+  ml_set_entry_M(Rk, 3, 0, 1, -sin(kappa));
+  ml_set_entry_M(Rk, 3, 1, 0, sin(kappa));
+  ml_set_entry_M(Rk, 3, 1, 1, cos(kappa));
+  ml_set_entry_M(Rk, 3, 2, 2, 1);
+
+  ml_AB (Ro, 3, 3, Rp, 3, 3, Aux);
+  ml_AB (Aux, 3, 3, Rk, 3, 3, R);
+
+  ml_free_M (Ro);
+  ml_free_M (Rp);
+  ml_free_M (Rk);
+  ml_free_M (Aux);
+}
+
+void ep_R_S (double *ParamL, double *ParamR, double *R, double *S)
+{
+  double *dP = ml_alocar_M (6, 1); 
+
+  ml_AmmB (1, ParamR, ParamL, 6, 1, dP); /*dP = ParamR - ParamL*/
+  
+  ml_set_entry_M(S, 3, 0, 0, 0); 
+  ml_set_entry_M(S, 3, 0, 1, -dP[2]); 
+  ml_set_entry_M(S, 3, 0, 2, dP[1]);
+  ml_set_entry_M(S, 3, 1, 0, dP[2]); 
+  ml_set_entry_M(S, 3, 1, 1, 0); 
+  ml_set_entry_M(S, 3, 1, 2, -dP[0]);
+  ml_set_entry_M(S, 3, 2, 0, -dP[1]); 
+  ml_set_entry_M(S, 3, 2, 1, dP[0]); 
+  ml_set_entry_M(S, 3, 2, 2, 0);
+
+  ep_M_rot (R, dP[3], dP[4], dP[5]);
+
+  ml_free_M (dP);
 }
 
 int main (void)
@@ -52,25 +118,28 @@ int main (void)
   char fl[] = "dados/par/paramL.txt";
   char fr[] = "dados/par/paramR.txt";
 
-  double* Tl = ml_alocar_M (3, 1);
-  double* Opkl = ml_alocar_M (3, 1);
-  double* Tr = ml_alocar_M (3, 1);
-  double* Opkr = ml_alocar_M (3, 1);
+  double* ParamL = ml_alocar_M (6, 1);
+  double* ParamR = ml_alocar_M (6, 1);
+  double* S = ml_alocar_M (3, 3);
+  double* R = ml_alocar_M (3, 3);
 
-  read_ascii_param (fl, Tl, Opkl);
-  read_ascii_param (fr, Tr, Opkr);
+  ep_read_ascii_param (fl, ParamL);
+  ep_read_ascii_param (fr, ParamR);
 
+  /*
   printf("\nL\n");
-  showm (Tl, 3, 1);
-  showm (Opkl, 3, 1);
+  showm (ParamL, 6, 1);
   printf("\nR\n");
-  showm (Tr, 3, 1);
-  showm (Opkr, 3, 1);
+  showm (ParamR, 6, 1);
+  printf("\ndR dT\n");
+  */
 
-  ml_free_M (Tl);
-  ml_free_M (Opkl);
-  ml_free_M (Tr);
-  ml_free_M (Opkr);
+  ep_R_S (ParamL, ParamR, R, S);
+
+  ml_free_M (ParamL);
+  ml_free_M (ParamR);
+  ml_free_M (S);
+  ml_free_M (R);
 
   return 0;
 }

@@ -2,6 +2,7 @@ dados/
 push.sh
 stereom
 oex
+epipolar
 *.o
 *.txt
 *~
