@@ -606,7 +606,13 @@ int main (void)
    * Definicao de variaveis
    * Alocacao de memoria
    */
-  int n = 25;              /* Numero de PFS 1/2 de observacoes */
+  const int n = 24-1-1-1-1-1;              /* Numero de PFS 1/2 de observacoes */
+  /* char * ffoto = "dados/pfs_f.txt";
+     char * fterreno = "dados/pfs_t.txt"; */
+
+  char * ffoto = "dados/par/limpres/pfs_fl.txt";
+  char * fterreno = "dados/par/limpres/pfs_tl.txt";
+
   int n0 = 3;              /* numero de PFS minimo */
   int df = n*2 - n0*2;
   int u = 6;               /* numero de parametros */
@@ -637,21 +643,23 @@ int main (void)
   p_oex_param param = oex_alocar_param ();
   p_oex_pfs pfs = oex_alocar_pfs ();
 
-  double terreno[25*3];
-  double foto[25*2];
+  double terreno[n*3];
+  double foto[n*2];
 
   /*Pl = var inv(Cl)*/
 
   /*
    * Carregar dados
    */
-  oex_add_oin_param (oin_param, (2527.01371+2515.01405)/2.0, 1041.17490, 782.66840);
+  /*oex_add_oin_param (oin_param, (2527.01371+2515.01405)/2.0, 1041.17490, 782.66840);*/
+  oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 1043.777785082072114, 782.329224502696547);
+
   oex_add_param (param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
   
-  carrega_coo(terreno, 25*3, "dados/pfs_t.txt", 't');
-  carrega_coo(foto, 25*2, "dados/pfs_f.txt", 'f');
+  carrega_coo(terreno, n*3, fterreno, 't');
+  carrega_coo(foto, n*2, ffoto, 'f');
 
-  oex_add_pfs (pfs, 25, terreno, foto);
+  oex_add_pfs (pfs, n, terreno, foto);
 
   oex_transfotopfs (oin_param, pfs);
 
