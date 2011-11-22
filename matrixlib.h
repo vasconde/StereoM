@@ -67,6 +67,7 @@ double *ml_AB (double *A, const int ma, const int na, double *B, const int mb, c
 
 /*
  * Multiplicacao de matrizes com opcao de transposicao
+ * A' se ta != 0 e B' se tb != 0
  */
 double *ml_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, int tb, double *C);
 

@@ -50,9 +50,9 @@ int ep_read_ascii_param (char* filen, double* Param)
   return 0;
 }
 
+
 /*
- * Gera vector de translacao e rotacao de l -> r
- * dX,dY,dZ,domega,dphi,dkappa
+ * Calculo da matriz fundamental
  */
 
 /* Calcula a matriz de rotacao */
@@ -92,12 +92,19 @@ void ep_M_rot (double *R, double omega, double phi, double kappa)
   ml_free_M (Aux);
 }
 
-void ep_R_S (double *ParamL, double *ParamR, double *R, double *S)
+/*
+ * Gera a matriz de translacao S e rotacao R de l -> r
+ * e determina a matrir essencial
+ */
+void ep_EssentialMatrix (double *ParamL, double *ParamR, double *E)
 {
-  double *dP = ml_alocar_M (6, 1); 
+  double *dP = ml_alocar_M (6, 1);
+  double *S = ml_alocar_M (3, 3);
+  double *R = ml_alocar_M (3, 3);
 
   ml_AmmB (1, ParamR, ParamL, 6, 1, dP); /*dP = ParamR - ParamL*/
   
+  /* matriz S */
   ml_set_entry_M(S, 3, 0, 0, 0); 
   ml_set_entry_M(S, 3, 0, 1, -dP[2]); 
   ml_set_entry_M(S, 3, 0, 2, dP[1]);
@@ -108,9 +115,24 @@ void ep_R_S (double *ParamL, double *ParamR, double *R, double *S)
   ml_set_entry_M(S, 3, 2, 1, dP[0]); 
   ml_set_entry_M(S, 3, 2, 2, 0);
 
+  /* matriz R */
   ep_M_rot (R, dP[3], dP[4], dP[5]);
 
+  /* matriz essencial E = RS */
+
+  ml_AB (R, 3, 3, S, 3, 3, E);
+
   ml_free_M (dP);
+  ml_free_M (S);
+  ml_free_M (R);
+}
+
+/*
+ * Calculo da reta epipolar E*Pl
+ */
+void ep_epipolarLine (double *E, double *Pl, double *EqEp)
+{
+  ml_ABtt (E, 3, 3, 0, Pl, 3, 1, 0, EqEp);  
 }
 
 int main (void)
@@ -120,8 +142,7 @@ int main (void)
 
   double* ParamL = ml_alocar_M (6, 1);
   double* ParamR = ml_alocar_M (6, 1);
-  double* S = ml_alocar_M (3, 3);
-  double* R = ml_alocar_M (3, 3);
+  double* E = ml_alocar_M (3, 3);
 
   ep_read_ascii_param (fl, ParamL);
   ep_read_ascii_param (fr, ParamR);
@@ -134,12 +155,13 @@ int main (void)
   printf("\ndR dT\n");
   */
 
-  ep_R_S (ParamL, ParamR, R, S);
+  ep_EssentialMatrix (ParamL, ParamR, E);
+
+  showm (E, 3, 3);
 
   ml_free_M (ParamL);
   ml_free_M (ParamR);
-  ml_free_M (S);
-  ml_free_M (R);
+  ml_free_M (E);
 
   return 0;
 }
