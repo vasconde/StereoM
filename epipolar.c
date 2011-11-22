@@ -144,8 +144,23 @@ int main (void)
   double* ParamR = ml_alocar_M (6, 1);
   double* E = ml_alocar_M (3, 3);
 
-  ep_read_ascii_param (fl, ParamL);
-  ep_read_ascii_param (fr, ParamR);
+  double *Pl = ml_alocar_M (3, 1);
+
+  double *EqEp = ml_alocar_M (3, 1);
+ 
+  double f = (2524.980712085470259+2512.961041523109998)/2;
+  double pxs = 8e-3 / f; /*pixel em m*/
+  
+
+  /* PF 109 */
+  Pl[0] = -80.7778 * pxs;
+  Pl[1] = 282.3292 * pxs;
+  Pl[2] = - f * pxs;
+
+  printf("%.10lf\n", pxs);
+
+  if(ep_read_ascii_param (fl, ParamL)) return 1;
+  if(ep_read_ascii_param (fr, ParamR)) return 1;
 
   /*
   printf("\nL\n");
@@ -156,12 +171,16 @@ int main (void)
   */
 
   ep_EssentialMatrix (ParamL, ParamR, E);
+  ep_epipolarLine (E, Pl, EqEp);
 
-  showm (E, 3, 3);
+  showm (Pl, 3, 1);
+  printf("\n\n");
+  showm (EqEp, 3, 1);
 
   ml_free_M (ParamL);
   ml_free_M (ParamR);
   ml_free_M (E);
+  ml_free_M (Pl);
 
   return 0;
 }
