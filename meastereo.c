@@ -134,17 +134,17 @@ void ms_firstAprox (p_ms_param_photo ph1, double* meas1,
 {
   double X1, Y1, X2, Y2, Z;
   
-  Z = (oExFoto2.Item2.getM() - oExFoto2.Item2.getH() * kxy(1, rot2, pFoto2, oIn) 
-       + oExFoto1.Item2.getH() * kxy(1, rot1, pFoto1, oIn) - oExFoto1.Item2.getM()) /
-    (kxy(1, rot1, pFoto1, oIn) - kxy(1, rot2, pFoto2, oIn));
+  Z = (ph2->X - ph2->Z * kxy(1, ph2, meas2) 
+       + ph1->Z * kxy(1, ph1, meas1) - ph1->X) /
+    (kxy(1, ph1, meas1) - kxy(1, ph2, meas2));
   
-  X1 = oExFoto1.Item2.getM() + (Z - oExFoto1.Item2.getH()) * kxy(1, rot1, pFoto1, oIn);
+  X1 = ph1->X + (Z - ph1->Z) * kxy(1, ph1, meas1);
   
-  Y1 = oExFoto1.Item2.getP() + (Z - oExFoto1.Item2.getH()) * kxy(2, rot1, pFoto1, oIn);
+  Y1 = ph1->Y + (Z - ph1->Z) * kxy(2, ph1, meas1);
   
-  X2 = oExFoto2.Item2.getM() + (Z - oExFoto2.Item2.getH()) * kxy(1, rot2, pFoto2, oIn);
+  X2 = ph2->X + (Z - ph2->Z) * kxy(1, ph2, meas2);
   
-  Y2 = oExFoto2.Item2.getP() + (Z - oExFoto2.Item2.getH()) * kxy(2, rot2, pFoto2, oIn);
+  Y2 = ph2->Y + (Z - ph2->Z) * kxy(2, ph2, meas2);
 
   res[0] = (X1 + X2) / 2;
   
