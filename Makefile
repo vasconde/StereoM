@@ -4,7 +4,7 @@
 CC = gcc
 CFLAGS = -Wall -ansi
 
-all:stereom oex epipolar
+all:stereom oex epipolar meastereo.o
 
 # stereom
 
@@ -35,6 +35,11 @@ epipolar:matrixlib.o epipolar.o
 
 epipolar.o:epipolar.c matrixlib.h
 	$(CC) $(CFLAGS) -c epipolar.c -o epipolar.o
+
+# meastereo
+
+meastereo.o: meastereo.c
+	$(CC) $(CFLAGS) -c meastereo.c -o meastereo.o 
 
 # outros
 
