@@ -132,7 +132,7 @@ void ep_EssentialMatrix (double *ParamL, double *ParamR, double *E)
  */
 void ep_epipolarLine (double *E, double *Pl, double *EqEp)
 {
-  ml_ABtt (E, 3, 3, 0, Pl, 3, 1, 0, EqEp);  
+  ml_AB(E, 3, 3, Pl, 3, 1, EqEp);  
 }
 
 int main (void)
@@ -148,7 +148,7 @@ int main (void)
 
   double *EqEp = ml_alocar_M (3, 1);
  
-  double f = (2524.980712085470259+2512.961041523109998)/2;
+  double f = 2512.961041523109998;
   double pxs = 8e-3 / f; /*pixel em m*/
   
 
@@ -175,6 +175,7 @@ int main (void)
 
   showm (Pl, 3, 1);
   printf("\n\n");
+  /*ml_aM (1.0/pxs, EqEp, 3, 1);*/
   showm (EqEp, 3, 1);
 
   ml_free_M (ParamL);
