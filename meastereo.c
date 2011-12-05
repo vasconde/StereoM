@@ -22,6 +22,7 @@ struct ms_param_photo {
   double x, y, f;     /** orientacao interna **/
   double X, Y, Z;  /** orientacao externa **/
   double omega, phi, kappa;
+  int op; /*1 = opk; 2 = pok*/
   double *R;
 };
 
@@ -29,7 +30,7 @@ struct ms_param_photo {
  * Gestao de memoria
  */
 p_ms_param_photo ms_alocar_param_photo (double x, double y, double f, 
-					double X, double Y, double Z,
+					double X, double Y, double Z, int op,
 					double omega, double phi, double kappa)
 {
   p_ms_param_photo param = (p_ms_param_photo)malloc(sizeof(struct ms_param_photo));
@@ -47,7 +48,7 @@ p_ms_param_photo ms_alocar_param_photo (double x, double y, double f,
   param->phi = phi;
   param->kappa = kappa;
 
-  ms_M_rot (R, omega, phi, kappa);
+  ms_M_rot (op, R, omega, phi, kappa);
 
   param->R = R;
 
@@ -62,7 +63,7 @@ void ms_free_param_photo (p_ms_param_photo param)
 
 
 /* Calcula a matriz de rotacao */
-void ms_M_rot (double *R, double omega, double phi, double kappa)
+void ms_M_rot (int op, double *R, double omega, double phi, double kappa)
 {
   double *Ro = ml_alocar_M_zeros (3, 3);
   double *Rp = ml_alocar_M_zeros (3, 3);
@@ -89,8 +90,17 @@ void ms_M_rot (double *R, double omega, double phi, double kappa)
   ml_set_entry_M(Rk, 3, 1, 1, cos(kappa));
   ml_set_entry_M(Rk, 3, 2, 2, 1);
 
-  ml_AB (Ro, 3, 3, Rp, 3, 3, Aux);
-  ml_AB (Aux, 3, 3, Rk, 3, 3, R);
+  switch(op)
+    {
+    case 1: /*omega phi kappa */
+      ml_AB (Ro, 3, 3, Rp, 3, 3, Aux);
+      ml_AB (Aux, 3, 3, Rk, 3, 3, R);
+      break;
+    case 2: /*phi omega kappa */
+      ml_AB (Rp, 3, 3, Ro, 3, 3, Aux);
+      ml_AB (Aux, 3, 3, Rk, 3, 3, R);
+      break;
+    }
 
   ml_free_M (Ro);
   ml_free_M (Rp);

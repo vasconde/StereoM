@@ -10,12 +10,12 @@
 typedef struct ms_param_photo *p_ms_param_photo;
 
 p_ms_param_photo ms_alocar_param_photo (double x, double y, double f, 
-					double X, double Y, double Z,
+					double X, double Y, double Z, int op,
 					double omega, double phi, double kappa);
 
 void ms_free_param_photo (p_ms_param_photo param);
 
-void ms_M_rot (double *R, double omega, double phi, double kappa);
+void ms_M_rot (int op, double *R, double omega, double phi, double kappa);
 
 double ms_ND (int op, p_ms_param_photo ph, double* meas);
 
