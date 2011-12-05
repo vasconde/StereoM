@@ -16,6 +16,7 @@
 #include "meastereo.h"
 
 #define POSR(i,j) (j+i*3)
+#define POS(i,j,n) (j+i*n)
 
 struct ms_param_photo {
   double x, y, f;     /** orientacao interna **/
@@ -130,35 +131,224 @@ double ms_kxy(int op, p_ms_param_photo ph, double* meas)
 
 /*transicao*/
 void ms_firstAprox (p_ms_param_photo ph1, double* meas1, 
-		    p_ms_param_photo ph2, double* meas2, double res)
+		    p_ms_param_photo ph2, double* meas2, double* res)
 {
   double X1, Y1, X2, Y2, Z;
   
-  Z = (ph2->X - ph2->Z * kxy(1, ph2, meas2) 
-       + ph1->Z * kxy(1, ph1, meas1) - ph1->X) /
-    (kxy(1, ph1, meas1) - kxy(1, ph2, meas2));
+  Z = (ph2->X - ph2->Z * ms_kxy(1, ph2, meas2) 
+       + ph1->Z * ms_kxy(1, ph1, meas1) - ph1->X) /
+    (ms_kxy(1, ph1, meas1) - ms_kxy(1, ph2, meas2));
   
-  X1 = ph1->X + (Z - ph1->Z) * kxy(1, ph1, meas1);
+  X1 = ph1->X + (Z - ph1->Z) * ms_kxy(1, ph1, meas1);
   
-  Y1 = ph1->Y + (Z - ph1->Z) * kxy(2, ph1, meas1);
+  Y1 = ph1->Y + (Z - ph1->Z) * ms_kxy(2, ph1, meas1);
   
-  X2 = ph2->X + (Z - ph2->Z) * kxy(1, ph2, meas2);
+  X2 = ph2->X + (Z - ph2->Z) * ms_kxy(1, ph2, meas2);
   
-  Y2 = ph2->Y + (Z - ph2->Z) * kxy(2, ph2, meas2);
+  Y2 = ph2->Y + (Z - ph2->Z) * ms_kxy(2, ph2, meas2);
 
   res[0] = (X1 + X2) / 2;
   
   res[1] = (Y1 + Y2) / 2;
   
-  res[2] = Z;
-  
-  return pa;
-  
+  res[2] = Z;  
 }
 
 
 void ms_photo2terrain (p_ms_param_photo ph1, double* meas1, 
-		    p_ms_param_photo ph2, double* meas2, double res)
+		    p_ms_param_photo ph2, double* meas2, double* res)
 {
+  int i;
+  double var0 = 1;
 
+  /*primeira aproximacao aos parametros*/
+  ms_firstAprox (ph1, meas1, ph2, meas2, res);
+
+  /*passa para vector*/
+  double *param = ml_alocar_M (3, 1);
+
+  param[POS(0, 0, 1)] = res[0];
+  param[POS(1, 0, 1)] = res[1];
+  param[POS(2, 0, 1)] = res[2];
+
+  /*vector de observacoes*/
+  double *l = ml_alocar_M (6, 1);
+
+  l[POS(0, 0, 1)] = meas1[0];
+  l[POS(1, 0, 1)] = meas1[1];
+  l[POS(2, 0, 1)] = meas1[2];
+  l[POS(3, 0, 1)] = meas2[0];
+  l[POS(4, 0, 1)] = meas2[1];
+  l[POS(5, 0, 1)] = meas2[2];
+
+  /* Matriz pesos (identidade) */
+  double *Pesos = ml_alocar_M_I(6);
+  double *Pesos_inv = ml_alocar_M (6, 6); 
+  double *Cl = ml_alocar_M_I(6);
+
+  double *A = ml_alocar_M (4, 3);
+
+  double *B = ml_alocar_M (4, 6);
+
+  /* Vector de fecho */
+  double *fecho = ml_alocar_M (4, 1);
+
+  /* vector das correcoes */
+  double *delta = ml_alocar_M (3, 1);
+
+  /* Matrizes */
+  double *A_t = ml_alocar_M (3, 4);
+  double *B_t = ml_alocar_M (6, 4);
+
+  double *M = ml_alocar_M (4, 4);
+  double *M_inv = ml_alocar_M (4, 4);
+
+  double *N = ml_alocar_M (3, 3);
+  double *N_inv = ml_alocar_M (3, 3);
+
+  double *Aux = ml_alocar_M(4, 6);
+  double *Aux2 = ml_alocar_M(3, 4);
+  double *Aux3 = ml_alocar_M(3, 4);
+  double *Aux4 = ml_alocar_M(3, 1);
+
+
+  /* ciclo */
+  /* Matriz A */
+
+  i = 0;
+  do
+    {
+      A[POS(0, 0, 3)] = -1; A[POS(0, 1, 3)] = 0; A[POS(0, 2, 3)] = ms_kxy(1, ph1, meas1);
+      A[POS(1, 0, 3)] = 0; A[POS(1, 1, 3)] = -1; A[POS(1, 2, 3)] = ms_kxy(2, ph1, meas1);
+
+      A[POS(2, 0, 3)] = -1; A[POS(2, 1, 3)] = 0; A[POS(2, 2, 3)] = ms_kxy(1, ph2, meas2);
+      A[POS(3, 0, 3)] = 0; A[POS(3, 1, 3)] = -1; A[POS(3, 2, 3)] = ms_kxy(2, ph2, meas2);
+
+      /* Matriz B */
+
+      B[POS(0, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(0, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(0, 2, 6)] = 0.0; B[POS(0, 3, 6)] = 0.0; B[POS(0, 4, 6)] = 0.0; B[POS(0, 5, 6)] = 0.0;
+      B[POS(1, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(1, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(1, 2, 6)] = 0.0; B[POS(1, 3, 6)] = 0.0; B[POS(1, 4, 6)] = 0.0; B[POS(1, 5, 6)] = 0.0;
+
+      B[POS(2, 0, 6)] = 0.0; B[POS(2, 1, 6)] = 0.0; B[POS(2, 2, 6)] = 0.0; B[POS(2, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(2, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(2, 5, 6)] = 0.0;
+      B[POS(3, 0, 6)] = 0.0; B[POS(3, 1, 6)] = 0.0; B[POS(3, 2, 6)] = 0.0; B[POS(3, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(3, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(3, 5, 6)] = 0.0;
+
+      /* vector de fecho */
+      fecho[POS(0, 0, 1)] = ph1->X + (param[POS(2, 0, 1)] - ph1->Z) * ms_kxy(1, ph1, meas1) - param[POS(0, 0, 1)];
+      fecho[POS(1, 0, 1)] = ph1->Y + (param[POS(2, 0, 1)] - ph1->Z) * ms_kxy(2, ph1, meas1) - param[POS(1, 0, 1)];
+      fecho[POS(2, 0, 1)] = ph2->X + (param[POS(2, 0, 1)] - ph2->Z) * ms_kxy(1, ph2, meas2) - param[POS(0, 0, 1)];
+      fecho[POS(3, 0, 1)] = ph2->Y + (param[POS(2, 0, 1)] - ph2->Z) * ms_kxy(2, ph2, meas2) - param[POS(1, 0, 1)];
+
+
+      /*definicao dos pesos*/
+      ml_AeqB (Pesos, Cl, 6, 6); /*Pl = Cl*/
+      ml_invM(Pesos, 6);           /*Pl = inv(Pl)*/
+      ml_aM (var0, Pesos, 6, 6); /*Pl = var*Pl*/
+
+      /*
+                B_t = B.Clone();
+                B_t.Transpose();
+                A_t = A.Clone();
+                A_t.Transpose();
+
+                //correcções aos parametros dx, dy, dz
+
+
+
+                Pesos_inv = Pesos.Inverse(); //
+      */
+
+      /*
+	Aux, 4 6
+	Aux2 3 4
+	Aux3 3 4
+	Aux4 3 1
+       */
+
+      /*Inversao de Pl*/
+      ml_AeqB (Pesos_inv, Pesos, 6, 6);
+      ml_invM(Pesos_inv, 6);
+
+      /*
+	M = B * Pesos_inv * B_t;
+	M_inv = M.Inverse();
+      */
+
+      /*M = B inv(Pl) * B' */
+      ml_ABtt (B, 4, 6, 0, Pesos_inv, 6, 6, 0, Aux);
+      ml_ABtt (Aux, 4, 6, 0, B, 4, 6, 1, M);
+
+      /*Inversao de M*/
+      ml_AeqB (M_inv, M, 4, 4);
+      ml_invM (M_inv, 4);
+
+      
+
+      /*N = A_t * M_inv * A;*/
+      ml_ABtt (A, 4, 3, 1, M_inv, 4, 4, 0, Aux2);
+      ml_ABtt (Aux2, 3, 4, 0, A, 4, 3, 0, N);
+
+      /*Inversao de N*/
+      ml_AeqB (N_inv, N, 3, 3);
+      ml_invM (N_inv, 3);
+
+      /*
+                delta = (-1 * N_inv) * A_t;
+                delta = delta * M_inv * fecho;
+      */
+      ml_aM (-1.0, N_inv, 3, 3);
+      ml_ABtt (/*-*/N_inv, 3, 3, 0, A, 4, 3, 1, Aux2);
+      ml_ABtt (Aux2, 3, 4, 0, M_inv, 4, 4, 0, Aux3);
+      ml_ABtt (Aux3, 3, 4, 0, fecho, 4, 1, 0, delta);
+
+      /*param = param + delta;*/
+      ml_AeqB (Aux4, param, 3, 1);
+      ml_AmmB (0, Aux4, delta, 3, 1, param);
+
+      i++;
+
+    } while (sqrt(pow(delta[0],2) + pow(delta[1],2) + pow(delta[2],2)) >= 0.000001 && i < 10);
+
+  /*fim de ciclo*/
+  
+  res[0] = param[0];
+  res[1] = param[1];
+  res[2] = param[2];
+  
+  printf("%d\n", i);
+  printf("M = %lf\n", res[0]);
+  printf("P = %lf\n", res[1]);
+  printf("H = %lf\n", res[2]);
+  
+  /*return res;*/
+  
+  ml_free_M (param);
+  ml_free_M (l);
+  ml_free_M (Pesos);
+  ml_free_M (Pesos_inv);
+  
+  ml_free_M (A);
+  
+  ml_free_M (B);
+  
+  /* Vector de fecho */
+  ml_free_M (fecho);
+  
+  /* vector das correcoes */
+  ml_free_M (delta);
+  
+  /* Matrizes */
+  ml_free_M (A_t);
+  ml_free_M (B_t);
+  
+  ml_free_M (M);
+  ml_free_M (M_inv);
+  
+  ml_free_M (N);
+  ml_free_M (N_inv);
+  
+  ml_free_M (Aux);
+  ml_free_M (Aux2);
+  ml_free_M (Aux3);
+  ml_free_M (Aux4);
+  
 }

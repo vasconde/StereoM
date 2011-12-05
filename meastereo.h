@@ -22,9 +22,9 @@ double ms_ND (int op, p_ms_param_photo ph, double* meas);
 double ms_kxy (int op, p_ms_param_photo ph, double* meas);
 
 void ms_firstAprox (p_ms_param_photo ph1, double* meas1, 
-		    p_ms_param_photo ph2, double* meas2, double res);
+		    p_ms_param_photo ph2, double* meas2, double* res);
 
 void ms_photo2terrain (p_ms_param_photo ph1, double* meas1, 
-		       p_ms_param_photo ph2, double* meas2, double res);
+		       p_ms_param_photo ph2, double* meas2, double* res);
 
 #endif
