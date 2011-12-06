@@ -16,172 +16,55 @@
 
 #include "matrixlib.h"
 
-/*** TEMPORARIAS ***/
+#define POS(i,j,n) (j+i*n)
 
-/* escrever no ecra a matriz M */
-void showm (double *M, int m, int n)
+/*passa para a memoria a matriz de um ficheiro ascii*/
+void readm (char *nfile, double *M, int m, int n)
 {
-  int i, j;
-  for(i = 0; i < m; i++)
-    {
-      for(j = 0; j < n; j++)
-	printf("%.4lf ", M[j+i*n]);
-      printf("\n");
-    }
-}
+  int i, j, k=0;
 
-/*** TEMPORARIAS ***/
+  FILE *f = fopen(nfile, "r");
 
-/* ler parametros x,y,x,omega,phi,kappa */
-int ep_read_ascii_param (char* filen, double* Param)
-{
-  FILE *f = fopen(filen, "r");
-
-  if(f == NULL)
-    {
-      printf("INFO: erro na leitura do ficheiro de parametros.\n");
-      return 1;
-    }
-
-  fscanf(f,"%lf %lf %lf", &Param[0], &Param[1], &Param[2]);
-  fscanf(f,"%lf %lf %lf", &Param[3], &Param[4], &Param[5]);
-
+  for(i=0; i < n; i++)
+    for(j=0; j < m; j++)
+      fscanf(f,"%lf", &M[k++]);
   fclose(f);
-  return 0;
-}
-
-
-/*
- * Calculo da matriz fundamental
- */
-
-/* Calcula a matriz de rotacao */
-void ep_M_rot (double *R, double omega, double phi, double kappa)
-{
-  double *Ro = ml_alocar_M_zeros (3, 3);
-  double *Rp = ml_alocar_M_zeros (3, 3);
-  double *Rk = ml_alocar_M_zeros (3, 3);
-
-  double *Aux = ml_alocar_M (3,3);
-
-  /* preenchimento das matrizes */
-  ml_set_entry_M(Ro, 3, 0, 0, 1);
-  ml_set_entry_M(Ro, 3, 1, 1, cos(omega));
-  ml_set_entry_M(Ro, 3, 1, 2, -sin(omega));
-  ml_set_entry_M(Ro, 3, 2, 1, sin(omega));
-  ml_set_entry_M(Ro, 3, 2, 2, cos(omega));
-
-  ml_set_entry_M(Rp, 3, 0, 0, cos(phi));
-  ml_set_entry_M(Rp, 3, 0, 2, sin(phi));
-  ml_set_entry_M(Rp, 3, 1, 1, 1);
-  ml_set_entry_M(Rp, 3, 2, 0, -sin(phi));
-  ml_set_entry_M(Rp, 3, 2, 2, cos(phi));
-
-  ml_set_entry_M(Rk, 3, 0, 0, cos(kappa));
-  ml_set_entry_M(Rk, 3, 0, 1, -sin(kappa));
-  ml_set_entry_M(Rk, 3, 1, 0, sin(kappa));
-  ml_set_entry_M(Rk, 3, 1, 1, cos(kappa));
-  ml_set_entry_M(Rk, 3, 2, 2, 1);
-
-  ml_AB (Ro, 3, 3, Rp, 3, 3, Aux);
-  ml_AB (Aux, 3, 3, Rk, 3, 3, R);
-
-  ml_free_M (Ro);
-  ml_free_M (Rp);
-  ml_free_M (Rk);
-  ml_free_M (Aux);
-}
-
-/*
- * Gera a matriz de translacao S e rotacao R de l -> r
- * e determina a matrir essencial
- */
-void ep_EssentialMatrix (double *ParamL, double *ParamR, double *E)
-{
-  double *dP = ml_alocar_M (6, 1);
-  double *S = ml_alocar_M (3, 3);
-  double *R = ml_alocar_M (3, 3);
-
-  ml_AmmB (1, ParamR, ParamL, 6, 1, dP); /*dP = ParamR - ParamL*/
-  
-  /* matriz S */
-  ml_set_entry_M(S, 3, 0, 0, 0); 
-  ml_set_entry_M(S, 3, 0, 1, -dP[2]); 
-  ml_set_entry_M(S, 3, 0, 2, dP[1]);
-  ml_set_entry_M(S, 3, 1, 0, dP[2]); 
-  ml_set_entry_M(S, 3, 1, 1, 0); 
-  ml_set_entry_M(S, 3, 1, 2, -dP[0]);
-  ml_set_entry_M(S, 3, 2, 0, -dP[1]); 
-  ml_set_entry_M(S, 3, 2, 1, dP[0]); 
-  ml_set_entry_M(S, 3, 2, 2, 0);
-
-  /* matriz R */
-  ep_M_rot (R, dP[3], dP[4], dP[5]);
-
-  /* matriz essencial E = RS */
-
-  ml_AB (R, 3, 3, S, 3, 3, E);
-
-  ml_free_M (dP);
-  ml_free_M (S);
-  ml_free_M (R);
-}
-
-/*
- * Calculo da reta epipolar E*Pl
- */
-void ep_epipolarLine (double *E, double *Pl, double *EqEp)
-{
-  ml_AB(E, 3, 3, Pl, 3, 1, EqEp);  
 }
 
 int main (void)
 {
-  char fl[] = "dados/par/paramL.txt";
-  char fr[] = "dados/par/paramR.txt";
+  int np = 20;
+  double *left = ml_alocar_M (np, 2);
+  double *right = ml_alocar_M (np, 2);
+  double *A = ml_alocar_M (np, 9);
 
-  double* ParamL = ml_alocar_M (6, 1);
-  double* ParamR = ml_alocar_M (6, 1);
-  double* E = ml_alocar_M (3, 3);
-
-  double *Pl = ml_alocar_M (3, 1);
-
-  double *EqEp = ml_alocar_M (3, 1);
- 
-  double f = 2512.961041523109998;
-  double pxs = 8e-3 / f; /*pixel em m*/
+  double x1, y1, x2, y2;
   
 
-  /* PF 109 */
-  Pl[0] = -80.7778 * pxs;
-  Pl[1] = 282.3292 * pxs;
-  Pl[2] = - f * pxs;
+  readm ("dados/epipolar/left.txt", left, np, 2);
+  readm ("dados/epipolar/right.txt", right, np, 2);
 
-  printf("%.10lf\n", pxs);
+  for(i = 0; i < np; i++)
+    {
+      x1 = left[POS(i,0,2)];
+      y1 = left[POS(i,1,2)];
+      x2 = right[POS(i,0,2)];
+      y2 = right[POS(i,1,2)];
+      
+      A[POS(i,0,9)] = x1*x2;
+      A[POS(i,1,9)] = y1*x2;
+      A[POS(i,2,9)] = x2;
+      A[POS(i,3,9)] = x1*y2;
+      A[POS(i,4,9)] = y1*y2;
+      A[POS(i,5,9)] = y2;
+      A[POS(i,6,9)] = x1;
+      A[POS(i,7,9)] = y1;
+      A[POS(i,8,9)] = 1.0;
+    }
 
-  if(ep_read_ascii_param (fl, ParamL)) return 1;
-  if(ep_read_ascii_param (fr, ParamR)) return 1;
+  
 
-  /*
-  printf("\nL\n");
-  showm (ParamL, 6, 1);
-  printf("\nR\n");
-  showm (ParamR, 6, 1);
-  printf("\ndR dT\n");
-  */
-
-  ep_EssentialMatrix (ParamL, ParamR, E);
-  ep_epipolarLine (E, Pl, EqEp);
-
-  showm (Pl, 3, 1);
-  printf("\n\n");
-  /*ml_aM (1.0/pxs, EqEp, 3, 1);*/
-  showm (EqEp, 3, 1);
-
-  ml_free_M (ParamL);
-  ml_free_M (ParamR);
-  ml_free_M (E);
-  ml_free_M (Pl);
-
+  ml_free_M (left);
+  ml_free_M (right);
   return 0;
 }
