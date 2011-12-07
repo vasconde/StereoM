@@ -30,25 +30,29 @@ void readm (char *nfile, double *M, int m, int n)
       fscanf(f,"%lf", &M[k++]);
   fclose(f);
 }
-/*
-int main (void)
+
+void ep_fundamentalMatrix (int np, double* left, double* right, double* FM)
 {
-  int np = 20;
-  int i, j;
-  double *left = ml_alocar_M (np, 2);
-  double *right = ml_alocar_M (np, 2);
+  int i; /*ciclo for*/
+
   double *A = ml_alocar_M (np, 9);
 
   double *U = ml_alocar_M (np, np);
   double *S = ml_alocar_M (np, 1);
-  double *Vt = ml_alocar_M (9, 9);
+  double *V = ml_alocar_M (9, 9);
+
+  double *F = ml_alocar_M (3, 3);
+
+  double *FU = ml_alocar_M (3, 3);
+  double *FS_ = ml_alocar_M (3, 1);
+  double *FV = ml_alocar_M (3, 3);
+  double *FS = ml_alocar_M_I (3);
+  double *FSn = ml_alocar_M_I (3);
+  
+  double *Aux = ml_alocar_M (3, 3);
 
   double x1, y1, x2, y2;
   
-
-  readm ("dados/epipolar/left.txt", left, np, 2);
-  readm ("dados/epipolar/right.txt", right, np, 2);
-
   for(i = 0; i < np; i++)
     {
       x1 = left[POS(i,0,2)];
@@ -68,99 +72,89 @@ int main (void)
     }
 
 
-  ml_svd(A, np, 9, U, S, Vt);
+  ml_svd(A, np, 9, U, S, V);
 
-
-  printf("---------------------\n");
-  for(i=0; i < np; i++)
-    {
-      for(j=0; j < np; j++)
-	printf("%lf ", U[POS(i,j,np)]);
-      printf("\n");
-    }
-  printf("---------------------\n");
-  for(i=0; i < np; i++)
-    {
-      for(j=0; j < 1; j++)
-	printf("%lf ", S[POS(i,j,1)]);
-      printf("\n");
-    }
-  printf("......................\n");
   for(i=0; i < 9; i++)
-    {
-      for(j=0; j < 9; j++)
-	printf("%lf ", Vt[POS(i,j,9)]);
-      printf("\n");
-    }
+    F[i] = V[POS(i,8,9)];
 
-  ml_free_M (left);
-  ml_free_M (right);
+  ml_svd(F, 3, 3, FU, FS_, FV);
+
+  FS[POS(0,0,3)] = FS_[0];
+  FS[POS(1,1,3)] = FS_[1];
+  FS[POS(2,2,3)] = FS_[2];
+
+  ml_AeqB (FSn, FS, 3, 3);
+  FSn[POS(2,2,3)] = 0.0;
+
+  ml_ABtt (FU, 3, 3, 0, FSn, 3, 3, 0, Aux);
+  ml_ABtt (Aux, 3, 3, 0, FV, 3, 3, 1, FM);
+
   ml_free_M (A);
   ml_free_M (U);
   ml_free_M (S);
-  ml_free_M (Vt);
-  return 0;
+  ml_free_M (V);
+  ml_free_M (F);
+  ml_free_M (FU);
+  ml_free_M (FS_);
+  ml_free_M (FV);
+  ml_free_M (FS);
+  ml_free_M (FSn);  
 }
-*/
 
- 
+void ep_lepipolar (double* FM, double xl, double yl, double* a, double* b, double* c)
+{
+    double *Pl = ml_alocar_M (3, 1);
+    double *u = ml_alocar_M (3, 1);
+
+    Pl[0] = xl;
+    Pl[1] = yl;
+    Pl[2] = 1.0;
+
+    ml_ABtt (FM, 3, 3, 0, Pl, 3, 1, 0, u);
+
+    *a = u[0];
+    *b = u[1];
+    *c = u[2];
+
+    ml_free_M (Pl);
+    ml_free_M (u);
+}
+
 int main (void)
 {
   int i, j;
-  const int m  = 6;
-  const int n  = 5;
-  double A[] = {8.79,9.93,9.83,5.45,3.16,
-		6.11,6.91,5.04,-0.27,7.98,
-		-9.15,-7.93,4.86,4.85,3.01,
-		9.57,1.64,8.83,0.74,5.80,
-		-3.49,4.02,9.80,10.00,4.27,
-		9.84,0.15,-8.99,-6.02,-5.31};
+  int np = 12;
+
+  double *left = ml_alocar_M (np, 2);
+  double *right = ml_alocar_M (np, 2);
+  double *FM = ml_alocar_M (3, 3);
+  double a, b, c;
+  double xl, yl;
+
+  readm ("dados/epipolar/left.txt", left, np, 2);
+  readm ("dados/epipolar/right.txt", right, np, 2);
+
+  ep_fundamentalMatrix (np, left, right, FM);
+
+  xl = 1745;
+  yl = 694;
+
+  ep_lepipolar (FM, xl, yl, &a, &b, &c);
+
+  printf("a = %lf;\nb = %lf;\nc = %lf;\n", a, b, c);
+
+  printf("FM---------------------\n");
+  for(i=0; i < 3; i++)
+    {
+      for(j=0; j < 3; j++)
+	printf("%lf ", FM[POS(i,j,3)]);
+      printf("\n");
+    }
+
+
+  ml_free_M (left);
+  ml_free_M (right);
+  ml_free_M (FM);
   
-  double U[m*m];
-  double S[n*1];
-  double Vt[n*n];
-  
-  /*
-  double *U = (double*)malloc(m*m*sizeof(double));
-  double *S = (double*)malloc(n*1*sizeof(double));
-  double *Vt = (double*)malloc(n*n*sizeof(double));
-  */
-
-  printf("A ---------------------\n");
-  for(i=0; i < m; i++)
-    {
-      for(j=0; j < n; j++)
-	printf("%lf ", A[POS(i,j,n)]);
-      printf("\n");
-    }
-
-  ml_svd(A, m, n, U, S, Vt);
-
-  printf("\nU ---------------------\n");
-  for(i=0; i < m; i++)
-    {
-      for(j=0; j < m; j++)
-	printf("%lf ", U[POS(i,j,m)]);
-      printf("\n");
-    }
-
- printf("S ---------------------\n");
-  for(i=0; i < n; i++)
-    {
-      for(j=0; j < 1; j++)
-	printf("%lf ", S[POS(i,j,1)]);
-      printf("\n");
-    }
-
-  printf("V ---------------------\n");
-  for(i=0; i < n; i++)
-    {
-      for(j=0; j < n; j++)
-	printf("%lf ", Vt[POS(i,j,n)]);
-      printf("\n");
-    }
-
-
   return 0;
 }
-

@@ -124,7 +124,7 @@ double *ml_AB (double *A, const int ma, const int na, double *B, const int mb, c
  * Multiplicacao de matrizes com opcao de transposicao
  * A' se ta != 0 e B' se tb != 0
  */
-double *ml_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, int tb, double *C)
+void ml_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, int tb, double *C)
 {
   int aux;
   int saltoa = na, saltob = nb, saltoc = nb;
@@ -149,8 +149,6 @@ double *ml_ABtt (double *A, int ma, int na, int ta, double *B, int mb, int nb, i
     }
 
   cblas_dgemm(CblasRowMajor, transposeA, transposeB, ma, nb, na, 1.0, A, saltoa, B, saltob, 0.0, C, saltoc);
-
-  return C;
 }
 
 /*
@@ -218,12 +216,10 @@ void ml_AmmB (int op, double *A, double *B, int m, int n, double *C)
 void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, 
 	     double* U, int* LDU, double *VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
 
-void ml_svd(double* Ain, int ma, int na, double* Uin, double* Sin, double* Vtin)
+void ml_svd(double* Ain, int ma, int na, double* Uout, double* Sout, double* Vt)
 {
   char op = 'A';
   int info;
-
-  int i, j;
 
   int lwork;
   double wkopt;
@@ -233,84 +229,10 @@ void ml_svd(double* Ain, int ma, int na, double* Uin, double* Sin, double* Vtin)
   
   double *U = ml_alocar_M (ma, ma);
   double *S = ml_alocar_M (1, na);
-  double *Vt = ml_alocar_M (na, na);
 
   ml_Mt (Ain, ma, na, A);
-  ml_Mt (Uin, ma, ma, U);
-  ml_Mt (Sin, na, 1, S);
-  ml_Mt (Vtin, na, na, Vt);
-
-  printf("\n%lf %lf\n%lf %lf\n\n", A[0], A[1], A[ma], A[ma+1]);
-
-  lwork = -1;
-  dgesvd_(&op, &op, &ma, &na, A, &ma, S, U, &ma, Vt, &na, &wkopt, &lwork, &info);
-
-  lwork = (int)wkopt;
-  work = (double*)malloc(lwork*sizeof(double));
-  
-  dgesvd_(&op, &op, &ma, &na, A, &ma, S, U, &ma, Vt, &na, work, &lwork, &info);
-
-  for( i = 0; i < 1; i++ ) {
-    for( j = 0; j < na; j++ ) printf( " %6.2f", S[i+j*1] );
-    printf( "\n" );
-  }
-
-  for( i = 0; i < 1; i++ ) {
-    for( j = 0; j < na; j++ ) printf( " %6.2f", S[j+i*na] );
-    printf( "\n" );
-  }
-
-  ml_Mt (A, na, ma, Ain);
-  ml_Mt (U, ma, ma, Uin);
-  ml_Mt (S, 1, na, Sin);
-
-  printf("\nLOOK\n");
-  for( i = 0; i < na; i++ ) {
-    for( j = 0; j < 1; j++ ) printf( " %6.2f", Sin[j+i*1] );
-    printf( "\n" );
-  }
-
-  ml_Mt (Vt, ma, ma, Vtin);
-
-  printf("\nLOOK\n");
-  for( i = 0; i < na; i++ ) {
-    for( j = 0; j < 1; j++ ) printf( " %6.2f", Sin[j+i*1] );
-    printf( "\n" );
-  }
-
-  ml_free_M (A);
-  ml_free_M (U);
-  ml_free_M (S);
-  ml_free_M (Vt);
-  
-  if(info != 0)
-    printf("FODEU\n");
-
-  free(work);
-}
-
-
- /*
-void ml_svd(double* Ain, int ma, int na, double* Uin, double* S, double* Vtin)
-{
-  char op = 'A';
-  int info;
-  int aux;
-  
-  int lwork;
-  double wkopt;
-  double* work;
-
-  double *A = ml_alocar_M (na, ma);
-  
-  double *U = ml_alocar_M (ma, ma);
-  double *S = ml_alocar_M (na, 1);
-  double *Vt = ml_alocar_M (na, na);
-
-  ml_Mt (Ain, ma, na, A);
-  ml_Mt (Uin, ma, ma, U);
-  ml_Mt (Sin, ma, 1, S);
-  ml_Mt (Vtin, na, na, Vt);
+  ml_Mt (Uout, ma, ma, U);
+  ml_Mt (Sout, na, 1, S);
 
   lwork = -1;
   dgesvd_(&op, &op, &ma, &na, A, &ma, S, U, &ma, Vt, &na, &wkopt, &lwork, &info);
@@ -321,18 +243,15 @@ void ml_svd(double* Ain, int ma, int na, double* Uin, double* S, double* Vtin)
   dgesvd_(&op, &op, &ma, &na, A, &ma, S, U, &ma, Vt, &na, work, &lwork, &info);
 
   ml_Mt (A, na, ma, Ain);
-  ml_Mt (U, ma, ma, Uin);
-  ml_Mt (S, 1, ma, Sin);
-  ml_Mt (Vt, ma, ma, Vtin);
+  ml_Mt (U, ma, ma, Uout);
+  ml_Mt (S, 1, na, Sout);
 
   ml_free_M (A);
   ml_free_M (U);
   ml_free_M (S);
-  ml_free_M (Vt);
   
   if(info != 0)
-    printf("FODEU\n");
+    printf("ARDEU\n");
 
   free(work);
 }
- */
