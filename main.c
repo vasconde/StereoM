@@ -234,7 +234,7 @@ int main (void)
   
   do
     {
-      system("clear");
+      /*system("clear");*/
 
       op = display_main_menu ();
       
