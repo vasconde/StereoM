@@ -46,6 +46,8 @@ int display_main_menu ()
       scanf("%d", &op);
     } while (op < 1 || op > 7);
 
+ 
+
   return op;
 }
 

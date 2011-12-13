@@ -4,12 +4,12 @@
 CC = gcc
 CFLAGS = -Wall -ansi
 
-all:stereom oex epipolar meastereo.o
+all:stereom epipolar meastereo.o
 
 # stereom
 
-stereom:abmatching.o photojpeglib.o stereom.o
-	$(CC) $(CFLAGS) -ljpeg -lm abmatching.o photojpeglib.o stereom.o -o stereom
+stereom:abmatching.o photojpeglib.o stereom.o oex.o matrixlib.o
+	$(CC) $(CFLAGS) -ljpeg -lm -lblas -llapack matrixlib.o abmatching.o photojpeglib.o oex.o stereom.o -o stereom
 
 stereom.o:stereom.c photojpeglib.h abmatching.h
 	$(CC) $(CFLAGS) -c stereom.c -o stereom.o
@@ -21,10 +21,6 @@ abmatching.o:abmatching.c photojpeglib.h
 	$(CC) $(CFLAGS) -c abmatching.c -o abmatching.o
 
 # oex
-
-oex:matrixlib.o oex.o
-	$(CC) $(CFLAGS) -lm -lblas -llapack matrixlib.o oex.o -o oex
-
 oex.o:oex.c matrixlib.h
 	$(CC) $(CFLAGS) -c oex.c -o oex.o
 

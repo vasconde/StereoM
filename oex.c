@@ -17,13 +17,34 @@
 /*#include <cblas.h>*/   /* c BLAS   */
 #include "matrixlib.h"
 
-/*#include "oex.h"*/
+#include "oex.h"
 
+struct oex_oin_param 
+{
+  double c;
+  double xo;
+  double yo;
+};
+
+struct oex_param
+{
+  double Xo, Yo, Zo;
+  double omega, phi, kappa;
+
+  double *R;
+};
+
+struct oex_pfs
+{
+  int n_pfs;
+  double *terreno;
+  double *foto;
+};
 
 /*** TEMPORARIAS ***/
 
 /* escrever no ecra a matriz M */
-void showm (double *M, int m, int n)
+void oex_showm (double *M, int m, int n)
 {
   int i, j;
   for(i = 0; i < m; i++)
@@ -35,7 +56,7 @@ void showm (double *M, int m, int n)
 }
 
 /*passa para a memoria a matriz de um ficheiro ascii*/
-void readm (char *nfile, double *M, int m, int n)
+void oex_readm (char *nfile, double *M, int m, int n)
 {
   int i, j, k=0;
 
@@ -48,7 +69,7 @@ void readm (char *nfile, double *M, int m, int n)
 }
 
 /*carrega as coordenadas de uma lista ascii para uma matriz*/
-void carrega_coo(double *coo, int dim, char *nfile, char tipo)
+void oex_carrega_coo(double *coo, int dim, char *nfile, char tipo)
 {
   int i;
   int id;
@@ -74,29 +95,6 @@ void carrega_coo(double *coo, int dim, char *nfile, char tipo)
   fclose(f);
 }
 
-/*** ORIENTACAO EXTERNA ***/
-
-typedef struct oex_oin_param 
-{
-  double c;
-  double xo;
-  double yo;
-} *p_oex_oin_param;
-
-typedef struct oex_param
-{
-  double Xo, Yo, Zo;
-  double omega, phi, kappa;
-
-  double *R;
-} *p_oex_param;
-
-typedef struct oex_pfs
-{
-  int n_pfs;
-  double *terreno;
-  double *foto;
-} *p_oex_pfs;
 
 p_oex_oin_param oex_alocar_oin_param ()
 {
@@ -416,20 +414,22 @@ void oex_M_ascii (char *filename, double *M, int m, int n)
 }
 
 /*
- * MAIN
+ * Calculo
  */
-int main (void)
+void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs pfs)
 {
   /*
    * Definicao de variaveis
    * Alocacao de memoria
    */
-  const int n = 14;              /* Numero de PFS 1/2 de observacoes */
+  /*const int n = 14;*/              /* Numero de PFS 1/2 de observacoes */
   /* char * ffoto = "dados/pfs_f.txt";
      char * fterreno = "dados/pfs_t.txt"; */
 
+  /*
   char * ffoto = "dados/par/limpres/pfs_fr.txt";
   char * fterreno = "dados/par/limpres/pfs_tr.txt";
+  */
 
   int n0 = 3;              /* numero de PFS minimo */
   int df = n*2 - n0*2;
@@ -457,12 +457,15 @@ int main (void)
   double *Aux4 = ml_alocar_M(n * 2, 1);
   double *Aux5 = ml_alocar_M(1, n * 2);
   
+  /*
   p_oex_oin_param oin_param = oex_alocar_oin_param ();
   p_oex_param param = oex_alocar_param ();
   p_oex_pfs pfs = oex_alocar_pfs ();
-
+  */
+  /*
   double terreno[n*3];
   double foto[n*2];
+  */
 
   /*Pl = var inv(Cl)*/
 
@@ -470,15 +473,16 @@ int main (void)
    * Carregar dados
    */
   /*oex_add_oin_param (oin_param, (2527.01371+2515.01405)/2.0, 1041.17490, 782.66840);*/
-  oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 1043.777785082072114, 782.329224502696547);
+  /*  
+oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 1043.777785082072114, 782.329224502696547);
 
   oex_add_param (param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
   
-  carrega_coo(terreno, n*3, fterreno, 't');
-  carrega_coo(foto, n*2, ffoto, 'f');
+  oex_carrega_coo(terreno, n*3, fterreno, 't');
+  oex_carrega_coo(foto, n*2, ffoto, 'f');
 
   oex_add_pfs (pfs, n, terreno, foto);
-
+  */
   oex_transfotopfs (oin_param, pfs);
 
   /*
@@ -545,16 +549,16 @@ int main (void)
   printf("\nINFO: variancia de referencia a posteriori: %lf \n", var0_);
 
   printf("\nINFO: Parametros ajustados:\n\n");
-  showm(X, u, 1);
+  oex_showm(X, u, 1);
   printf("\nINFO: Respectivas incertezas:\n\n");
   for(i = 0; i < u; i++)
     {
       printf("%lf\n", sqrt(Cx[i+i*u]));
     }
   printf("\nINFO: Residuos:\n\n");
-  showm(V, n*2, 1);
+  oex_showm(V, n*2, 1);
 
-  /*showm (Pl, n*2, n*3);*/
+  /*oex_showm (Pl, n*2, n*3);*/
 
   /*
    * Libertar memoria
@@ -575,9 +579,5 @@ int main (void)
   ml_free_M(Aux4);
   ml_free_M(Aux5);
 
-  oex_libertar_oin_param (oin_param);
-  oex_libertar_param (param);
-  oex_libertar_pfs (pfs);
- 
-  return 0;
+
 }
