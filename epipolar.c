@@ -19,7 +19,7 @@
 #define POS(i,j,n) (j+i*n)
 
 /*passa para a memoria a matriz de um ficheiro ascii*/
-void readm (char *nfile, double *M, int m, int n)
+void ep_readm (char *nfile, double *M, int m, int n)
 {
   int i, j, k=0;
 
@@ -120,6 +120,7 @@ void ep_lepipolar (double* FM, double xl, double yl, double* a, double* b, doubl
     ml_free_M (u);
 }
 
+/*
 int main (void)
 {
   int i, j;
@@ -131,8 +132,8 @@ int main (void)
   double a, b, c;
   double xl, yl;
 
-  readm ("dados/epipolar/left.txt", left, np, 2);
-  readm ("dados/epipolar/right.txt", right, np, 2);
+  ep_readm ("dados/epipolar/left.txt", left, np, 2);
+  ep_readm ("dados/epipolar/right.txt", right, np, 2);
 
   ep_fundamentalMatrix (np, left, right, FM);
 
@@ -158,3 +159,4 @@ int main (void)
   
   return 0;
 }
+*/
