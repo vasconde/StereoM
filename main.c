@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <cblas.h>
+
 #include "matrixlib.h"
 
 #include "abmatching.h"
@@ -197,7 +199,7 @@ int estereorestituicao_auto (double *FM, int tdim)
   int height_r, width_r;
 
   double epil[3];
-  double fl [2];
+  int fl [2];
   int ty = 3;
 
   int i,j;
@@ -206,7 +208,16 @@ int estereorestituicao_auto (double *FM, int tdim)
 
   foto_l = ph_read_jpeg_file(file_image_l);
   foto_r = ph_read_jpeg_file(file_image_r);
-  
+
+  /*
+  printf("%d\n", ph_componente_photo (foto_r, 'R')[578][1263]);
+  printf("%d\n", ph_componente_photo (foto_r, 'R')[1027][1587]);
+  printf("%d\n", ph_componente_photo (foto_r, 'R')[751][363]);
+  printf("%d\n", ph_componente_photo (foto_r, 'R')[1195][1607]);
+  */
+
+  /*return -1;*/
+
   if( foto_l != NULL ) 
     printf("INFO: Processamento JPEG completo\n");
   else
@@ -233,16 +244,22 @@ int estereorestituicao_auto (double *FM, int tdim)
   printf("Coordenadas na imagem esqueda: ");
   scanf("%d %d", &fl[0], &fl[1]);
   
-  ep_lepipolar (FM, fl[0], fl[1], &epil[0], &epil[1], &epil[2]);
+  /*atencao atencao para a epipolar n entra l,c mas c,l*/
+  ep_lepipolar (FM, fl[1], fl[0], &epil[0], &epil[1], &epil[2]);
 
-  window = abm_alocar_sub_matrix (im, him, wim, i-halfh, i+halfh, 
-					   j-halfw, j+halfw);
+  printf("a = %lf\nb = %lf\nc = %lf\n",epil[0],epil[1],epil[2]);
+
+  window = abm_alocar_sub_matrix (ph_componente_photo (foto_l, 'G'), height_l, width_l, fl[0]-tdim, fl[0]+tdim, 
+					   fl[1]-tdim, fl[1]+tdim);
+
+  abm_cross_correlation_epi (ph_componente_photo (foto_r, 'G'), height_r, width_r, 
+			     window, 2*tdim+1, 2*tdim+1, epil, 15);
 
   /*abm_cross_correlation (ph_componente_photo (foto1, 'R'), height, width, 
     ph_componente_photo (template, 'R'), ph_height_photo(template), 
     ph_width_photo(template));*/
   
-  for(i=0; i < ; i++)
+  
   /*
   abm_cross_correlation_epi (ph_componente_photo (foto1, 'R'), height, width, 
 			     ph_componente_photo (template, 'R'), ph_height_photo(template), 
@@ -308,7 +325,7 @@ int main (void)
 	  break;
 	case 5:
 
-	  estereorestituicao_auto (FM);
+	  estereorestituicao_auto (FM, 10);
 	  break;
 	case 6:
 	  
@@ -319,9 +336,9 @@ int main (void)
     } while (op != 7);
 
 
-  oex_libertar_oin_param (oin_param);
-  oex_libertar_param (oex_param);
-  free(FM);
+  if (oin_param != NULL) oex_libertar_oin_param (oin_param);
+  if (oex_param != NULL) oex_libertar_param (oex_param);
+  if (FM != NULL) free(FM);
   
 
   return 0;

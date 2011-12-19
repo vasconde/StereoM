@@ -131,7 +131,8 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
   double cc;
   double y;
   int int_y;
- 
+  int aux = 1276; /*temp*/
+  
   for(j = halfw; j < wim - halfw; j++)
     {
       /*ax+by+c=0; y = (-c-ax)/b*/
@@ -143,11 +144,22 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
       else 
        for(i = int_y-ty; i <= int_y+ty; i++)
 	 {
+	   /*
+	   if (j > 1275 && j < 1285)
+	     {
+	       if(aux != j)
+		 {
+		   printf("\n****\n");
+		   aux = j;
+		 }
+	       printf("(%d , %d , %d)\n", i, j, im[i][j]);
+	     } 
+	   */
 	   window = abm_alocar_sub_matrix (im, him, wim, i-halfh, i+halfh, 
 					   j-halfw, j+halfw);
 	   cc = abm_coef_correlacao (window, t, ht, wt);
 	   abm_libertar_sub_matrix(window);
-	   if (cc >= 0.99)
+	   if (cc >= 0.94)
 	     printf("ENCONTROU: cc = %lf\n          H: %d   W: %d\n", cc, i, j);
 	 }
     }
