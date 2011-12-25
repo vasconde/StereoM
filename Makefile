@@ -1,16 +1,17 @@
 # # # Makefle # # #
 # na consola executar: make
 
-CC = clang
-CSTD = -std=c89
+CC = gcc
+CSTD = -ansi
 CFLAGS = -Wall 
+CLIBS = -lm -ljpeg -lblas -llapack
 
 all:main
 
 # stereom
 
 main:abmatching.o photojpeglib.o main.o oex.o epipolar.o matrixlib.o
-	$(CC) $(CFLAGS) -ljpeg -lm -lblas -llapack matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o main.o -o main
+	$(CC) $(CFLAGS) matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o main.o -o main $(CLIBS)
 
 main.o:main.c photojpeglib.h abmatching.h epipolar.h
 	$(CC) $(CFLAGS) $(CSTD) -c main.c -o main.o
