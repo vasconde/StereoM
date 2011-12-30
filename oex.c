@@ -19,6 +19,8 @@
 
 #include "oex.h"
 
+/*Estrutura para albergar 
+ *os parametros de o. interna*/
 struct oex_oin_param 
 {
   double c;
@@ -26,6 +28,8 @@ struct oex_oin_param
   double yo;
 };
 
+/*Estrutura para albergar 
+ *os parametros de o. externa*/
 struct oex_param
 {
   double Xo, Yo, Zo;
@@ -34,6 +38,9 @@ struct oex_param
   double *R;
 };
 
+/* estrutura para albergar as listas
+ * de coordenadas dos pfs 
+ * no espaco terreno e imagem */
 struct oex_pfs
 {
   int n_pfs;
@@ -436,6 +443,7 @@ void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs
   int u = 6;               /* numero de parametros */
   int it = 0;              /* numero de iteracoes */
   int i;
+  int k; /*aux para impressao dos residuos*/
   double var0 = 1.0;       /* var a priori */
   double var0_;            /* var a posteriori */
 
@@ -556,7 +564,19 @@ oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 104
       printf("%lf\n", sqrt(Cx[i+i*u]));
     }
   printf("\nINFO: Residuos:\n\n");
-  oex_showm(V, n*2, 1);
+  
+  for(i=0, k = 0; i < n*2; i++)
+    {
+      if(i%2 == 0)
+	printf("(%d) %lf\n", k, V[i]);
+      else
+	{
+	  printf("(%d) %lf           norm = %lf\n", k, V[i], sqrt(V[i]*V[i] + V[i-1]*V[i-1]));
+	  k++;
+	}
+    }
+  
+  /*oex_showm(V, n*2, 1);*/
 
   /*oex_showm (Pl, n*2, n*3);*/
 

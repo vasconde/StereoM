@@ -34,12 +34,12 @@ char file_param_in_r[MAX_FILE_NAME]= "dados/dados/oin/oin_r.txt"; /*file paramet
 
 char file_l_c_i_l[MAX_FILE_NAME] = "dados/dados/oex/pfs_fl.txt"; /*file list coordinates image left*/
 char file_l_c_t_l[MAX_FILE_NAME] = "dados/dados/oex/pfs_tl.txt"; /*file list coordinates terrain left*/
-int l_c_l = 19; /*list coordinates left*/
+int l_c_l = 24; /*list coordinates left*/
 char file_param_ex_ini_l[MAX_FILE_NAME]= "dados/dados/oex/oex_l.txt"; /*file parameters external initial left*/
 
 char file_l_c_i_r[MAX_FILE_NAME] = "dados/dados/oex/pfs_fr.txt"; /*file list coordinates image right*/
 char file_l_c_t_r[MAX_FILE_NAME] = "dados/dados/oex/pfs_tr.txt"; /*file list coordinates terrain right*/
-int l_c_r = 14; /*list coordinates right*/
+int l_c_r = 25; /*list coordinates right*/
 char file_param_ex_ini_r[MAX_FILE_NAME]= "dados/dados/oex/oex_r.txt"; /*file parameters external initial right*/
 
 char file_l_c_i_l_c[MAX_FILE_NAME] = "dados/dados/matrix/left.txt"; /*file list coordinates image left common*/
@@ -236,7 +236,7 @@ void orientacao_externa_foto (char *ffoto, char *fterreno, int n, p_oex_oin_para
 
 void matriz_fundamental(double *FM)
 {
-  int np = l_c_i_c; /*list coordinates image common*/
+  int np = l_c_i_c; /*numero de pontos comuns*/
 
   double *left = ml_alocar_M (np, 2);
   double *right = ml_alocar_M (np, 2);
@@ -336,25 +336,44 @@ int estereorestituicao_auto (double *FM, int tdim)
   return 0;
 }
 
-void orientacao_externa (p_oex_oin_param oin_param, p_oex_param oex_param)
+void orientacao_externa (char *nome_foin, char *nome_foex, 
+			 char *f_lista_coo_t, char *f_lista_coo_i, int npfs, 
+			 p_oex_oin_param oin_param, p_oex_param oex_param)
 {
-  /*falta pedir os parametros iniciais e separar por direita e esquerda*/
+  double xo, yo, f;
+  double Xo, Yo, Zo, omega, phi, kappa;
 
-  if (oin_param == NULL)
-    oin_param = oex_alocar_oin_param ();
-  if (oex_param == NULL)
-    oex_param = oex_alocar_param ();
+  FILE *foin = fopen(nome_foin, "r");
+  FILE *foex = fopen(nome_foex, "r");
+
+  if (foin == NULL) 
+    {
+      printf("ERRO: Na leitura do ficheiro %s\n", nome_foin);
+    }
+  if (foex == NULL) 
+    {
+      printf("ERRO: Na leitura do ficheiro %s\n", nome_foex);
+    }
+
+  /*carrega os parametros da orientacao interna*/
+  fscanf(foin, "%lf %lf %lf", &xo, &yo, &f); /*le do ficheiro*/
+  oex_add_oin_param (oin_param, f, xo, yo);       /*carrega a estrutura*/
   
-  oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 1043.777785082072114, 782.329224502696547);
+  /*carrega os parametros de orientacao externa*/
+  fscanf(foex, "%lf %lf %lf %lf %lf %lf", &Xo, &Yo, &Zo, &omega, &phi, &kappa); /*le do ficheiro*/
+  oex_add_param (oex_param, Xo, Yo, Zo, omega, phi, kappa, 1);/*carrega a estrutura*/
   
-  oex_add_param (oex_param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
-  
-  orientacao_externa_foto (file_l_c_i_r, file_l_c_t_r, 14, oin_param, oex_param);
+  /*executa o calculo da orientacao interna*/
+  orientacao_externa_foto (f_lista_coo_i, f_lista_coo_t, npfs, oin_param, oex_param);
+
+  fclose(foin);
+  fclose(foex);
 }
 
 int main (void)
 {
   double *FM = NULL;
+  int o; /*utilizado para opcoes*/
 
   /*orientacoes para a foto da esquerda*/
   p_oex_oin_param oin_param_l = NULL;
@@ -364,13 +383,13 @@ int main (void)
   p_oex_oin_param oin_param_r = NULL;
   p_oex_param oex_param_r = NULL;
 
-  dados_dis[0] = 0; /*ficheiro coordenadas img esquerda*/
-  dados_dis[1] = 0; /*ficheiro coordenadas img direita*/
-  dados_dis[2] = 0; /*ficheiro coordenadas terr esquerda*/
-  dados_dis[3] = 0; /*ficheiro coordenadas terr direita*/
-  dados_dis[4] = 0; /*ficheiro coordenadas img comuns*/
-  dados_dis[5] = 0; /*ficheiro imagem esquerda*/
-  dados_dis[6] = 0; /*ficheiro imagem direita*/
+  dados_dis[0] = 0; /* ficheiro coordenadas img esquerda    */
+  dados_dis[1] = 0; /* ficheiro coordenadas img direita    */
+  dados_dis[2] = 0; /* ficheiro coordenadas terr esquerda */
+  dados_dis[3] = 0; /* ficheiro coordenadas terr direita */
+  dados_dis[4] = 0; /* ficheiro coordenadas img comuns  */
+  dados_dis[5] = 0; /* ficheiro imagem esquerda        */
+  dados_dis[6] = 0; /* ficheiro imagem direita        */
   
   do
     {
@@ -387,14 +406,47 @@ int main (void)
 
 	case 2: /* 2. Orientacao Externa */
 	  
-	  orientacao_externa (oin_param_l, oex_param_l);
+	  do
+	    {
+	      printf("\n1. Esquerda\n");
+	      printf("2. Direita\n");
+	      printf("3. Concluido\n");
+	      printf("Opcao: ");
+	      
+	      scanf("%d", &o);
+	      assert(o == 1 || o == 2 || o == 3);
+	      
+	      switch (o)
+		{
+		case 1:
+		  if (oin_param_l == NULL)
+		    oin_param_l = oex_alocar_oin_param ();
+		  if (oex_param_l == NULL)
+		    oex_param_l = oex_alocar_param ();
+		  orientacao_externa (file_param_in_l, file_param_ex_ini_l, 
+				      file_l_c_t_l, file_l_c_i_l, l_c_l, 
+				      oin_param_l, oex_param_l);
+		  break;
+		 
+		case 2:
+		  if (oin_param_r == NULL)
+		    oin_param_r = oex_alocar_oin_param ();
+		  if (oex_param_r == NULL)
+		    oex_param_r = oex_alocar_param ();
+		  orientacao_externa (file_param_in_r, file_param_ex_ini_r, 
+				      file_l_c_t_r, file_l_c_i_r, l_c_r, 
+				      oin_param_r, oex_param_r);
+		  break;
+		}
+	    } while (o != 3);
+  
 	  
 	  break;
 
 	case 3: /* 3. Matriz Fundamental */
 	  if (FM == NULL) FM = ml_alocar_M (3, 3);
 	  matriz_fundamental(FM);
-	  oex_showm (FM, 3, 3);
+	  oex_showm (FM, 3, 3); 
 	  break;
 
 	case 4: /* 4. Estereorestituicao automatica */
