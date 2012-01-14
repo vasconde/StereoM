@@ -10,6 +10,7 @@
 #include <stdio.h>   /* c padrao */
 #include <stdlib.h>  /* c padrao */
 #include <math.h>
+#include <assert.h> /*assert(codition)*/
 
 #include "photojpeglib.h"
 
@@ -120,22 +121,60 @@ void abm_cross_correlation (unsigned char **im, int him, int wim, unsigned char 
       }
 }
 
+/*funcao para trocar o entre duas variaveis*/
+static void swap(double *x, double *y)
+{
+  double t;
+  
+  t = *x;
+  *x = *y;
+  *y = t;
+}
+
+
+/*
+ * DES:   Image matching restrigido ah epipolar
+ * PARAM: imagem, h da imagem, w da imagem,
+ *        template, h do template, w do template,
+ *        parametros da recta epipolar, intervalo em +/- em y,
+ *        limite minimo em x e limite maximo em x da janela de procura
+ */
 void abm_cross_correlation_epi (unsigned char **im, int him, int wim, 
 				unsigned char **t, int ht, int wt, 
-				double *epil, int ty)
+				double *epil, int ty, int x_min, int x_max)
 {
-  int i, j;
-  unsigned char **window;
-  int halfw = (wt-1)/2;
-  int halfh = (ht-1)/2;
-  double cc;
-  double y;
+  int i, j; /*ciclos*/
+  int inicio_x, fim_x;
+
+  unsigned char **window; /*janela de matching*/
+  int halfw = (wt-1)/2;   /*metade da dimensao do template em w*/
+  int halfh = (ht-1)/2;   /*metade da dimensao do template em h*/
+  double cc;              /*coeficiente de correlacao*/
+  double y;  
   int int_y;
   int aux = 1276; /*temp*/
-  
-  for(j = halfw; j < wim - halfw; j++)
+
+  /*garantir que os limites para x
+    nao excedem a dimensao da imagem*/
+  assert(x_min >= 0 && x_max <= wim);
+
+  /*define os limites da busca em x
+    tendo em conta do tamanho do template*/
+  if (x_min-halfw >= 0)
+    inicio_x = x_min;
+  else
+    inicio_x = x_min + halfw;
+
+  if (x_max + halfw <= wim)
+    fim_x = x_max;
+  else
+    fim_x = x_max - halfw;
+
+  /**/
+  for(j = inicio_x; j < fim_x; j++)
     {
-      /*ax+by+c=0; y = (-c-ax)/b*/
+      /*recta epipolar
+	ax+by+c=0; y = (-c-ax)/b*/
       y = (-epil[2]-epil[0]*(double)j)/epil[1];
       int_y = (int)y;
 

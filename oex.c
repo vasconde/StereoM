@@ -443,9 +443,16 @@ void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs
   int u = 6;               /* numero de parametros */
   int it = 0;              /* numero de iteracoes */
   int i;
-  int k; /*aux para impressao dos residuos*/
+
   double var0 = 1.0;       /* var a priori */
   double var0_;            /* var a posteriori */
+
+  /*auxiliares para impressao dos residuos*/
+  int k;
+  int k_max;
+  double max;
+  double res_norma;
+  double res_media;
 
   /*double d2r = (4.0*atan(1.0))/180;*/
 
@@ -552,9 +559,6 @@ oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 104
 
   printf("\nINFO: %d iteracoes\n", it);
 
-  printf("\nINFO: variancia de referencia: %lf \n", var0);
-
-  printf("\nINFO: variancia de referencia a posteriori: %lf \n", var0_);
 
   printf("\nINFO: Parametros ajustados:\n\n");
   oex_showm(X, u, 1);
@@ -565,16 +569,42 @@ oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 104
     }
   printf("\nINFO: Residuos:\n\n");
   
-  for(i=0, k = 0; i < n*2; i++)
+  for(i=0, k = 1, res_media = 0; i < n*2; i++)
     {
       if(i%2 == 0)
 	printf("(%d) %lf\n", k, V[i]);
       else
 	{
-	  printf("(%d) %lf           norm = %lf\n", k, V[i], sqrt(V[i]*V[i] + V[i-1]*V[i-1]));
+	  res_norma = sqrt(V[i]*V[i] + V[i-1]*V[i-1]);
+	  
+	  if (k == 1)
+	    {
+	      max = res_norma;
+	      k_max = k;
+	    }
+	  else
+	    if (res_norma > max)
+	      {
+		max = res_norma;
+		k_max = k;
+	      }
+
+	  printf("(%d) %lf           norm = %lf\n", k, V[i], res_norma);
 	  k++;
 	}
+      
+      res_media += V[i];
     }
+
+  res_media /= (n*2);
+
+  printf("\nINFO: a media dos residuos eh de: %lf\n", res_media);
+
+  printf("\nINFO: O maior residuo eh (%d) com %lf\n", k_max, max);
+
+  printf("\nINFO: variancia de referencia: %lf \n", var0);
+
+  printf("\nINFO: variancia de referencia a posteriori: %lf \n", var0_);
   
   /*oex_showm(V, n*2, 1);*/
 

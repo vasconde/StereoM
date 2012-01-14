@@ -24,6 +24,6 @@ void abm_cross_correlation (unsigned char **im, int him, int wim,
 
 void abm_cross_correlation_epi (unsigned char **im, int him, int wim, 
 				unsigned char **t, int ht, int wt, 
-				double *epil, int ty);
+				double *epil, int ty,int x_min, int x_max);
 
 #endif
