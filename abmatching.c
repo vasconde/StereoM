@@ -121,17 +121,6 @@ void abm_cross_correlation (unsigned char **im, int him, int wim, unsigned char 
       }
 }
 
-/*funcao para trocar o entre duas variaveis*/
-static void swap(double *x, double *y)
-{
-  double t;
-  
-  t = *x;
-  *x = *y;
-  *y = t;
-}
-
-
 /*
  * DES:   Image matching restrigido ah epipolar
  * PARAM: imagem, h da imagem, w da imagem,
@@ -149,11 +138,14 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
   unsigned char **window; /*janela de matching*/
   int halfw = (wt-1)/2;   /*metade da dimensao do template em w*/
   int halfh = (ht-1)/2;   /*metade da dimensao do template em h*/
-  double cc;              /*coeficiente de correlacao*/
-  double y;  
-  int int_y;
-  int aux = 1276; /*temp*/
 
+  double cc;              /*coeficiente de correlacao instatantaneo*/
+  double cc_max = 0;      /*coeficiente de correlacao maximo*/
+  int coo_cc_max[2];   /*coordenadas do cc maximo*/
+
+  double y;               /*y da epipolar para um dado x*/
+  int int_y;              /*o y anterior mas passado a inteiro*/
+  
   /*garantir que os limites para x
     nao excedem a dimensao da imagem*/
   assert(x_min >= 0 && x_max <= wim);
@@ -170,7 +162,8 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
   else
     fim_x = x_max - halfw;
 
-  /**/
+  /*ciclo para percorrer a janela de procura e encontrar
+    a posicao para a qual o cc eh maximo*/
   for(j = inicio_x; j < fim_x; j++)
     {
       /*recta epipolar
@@ -178,30 +171,39 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
       y = (-epil[2]-epil[0]*(double)j)/epil[1];
       int_y = (int)y;
 
+      /*verificar se a epipolar neste ponto
+	nao sai dos limites superiror e inferiror 
+	da imagem da imagem*/
       if((int_y-ty)-halfh < 0 || int_y+ty+halfh > him)
 	;
+
       else 
        for(i = int_y-ty; i <= int_y+ty; i++)
 	 {
-	   /*
-	   if (j > 1275 && j < 1285)
-	     {
-	       if(aux != j)
-		 {
-		   printf("\n****\n");
-		   aux = j;
-		 }
-	       printf("(%d , %d , %d)\n", i, j, im[i][j]);
-	     } 
-	   */
+	   /*cria a janela de matching*/
 	   window = abm_alocar_sub_matrix (im, him, wim, i-halfh, i+halfh, 
 					   j-halfw, j+halfw);
+	   
+	   /*determina o coeficiente de correlacao entre a 
+	     a janela de matching e o template*/
 	   cc = abm_coef_correlacao (window, t, ht, wt);
+
+	   /*actualizacao do cc maximo*/
+	   if (cc > cc_max)
+	     {
+	       cc_max = cc;
+	       coo_cc_max[0] = i;
+	       coo_cc_max[1] = j;
+	     }
+ 
+	   /*destroi a janela de matching*/
 	   abm_libertar_sub_matrix(window);
-	   if (cc >= 0.94)
-	     printf("ENCONTROU: cc = %lf\n          H: %d   W: %d\n", cc, i, j);
+
 	 }
     }
-  
+
+  /*resultado*/
+  if (cc_max > 0.90)
+      printf("\nENCONTROU: cc = %lf\n          H: %d   W: %d\n", cc_max, coo_cc_max[0], coo_cc_max[1]);
 }
 
