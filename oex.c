@@ -238,6 +238,19 @@ void oex_set_param (p_oex_param param, double Xo, double Yo, double Zo, double o
 } 
 
 /*
+ * Recolhe os parametros de orientacao externa
+ */
+void oex_get_param (p_oex_param param, double* Xo, double* Yo, double* Zo, double* omega, double* phi, double* kappa)
+{
+  *Xo = param->Xo;
+  *Yo = param->Yo;
+  *Zo = param->Zo;
+  *omega = param->omega;
+  *phi = param->phi;
+  *kappa = param->kappa;
+} 
+
+/*
  * retorna as componetes Nx, Ny e D
  * das equacoes de colinearidade
  */

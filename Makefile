@@ -3,17 +3,17 @@
 
 CC = gcc
 CSTD = -ansi
-CFLAGS = -Wall 
+CFLAGS = -Wall -g 
 CLIBS = -lm -ljpeg -lblas -llapack
 
 all:main
 
 # stereom
 
-main:abmatching.o photojpeglib.o main.o oex.o epipolar.o matrixlib.o
-	$(CC) $(CFLAGS) matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o main.o -o main $(CLIBS)
+main:abmatching.o photojpeglib.o main.o oex.o epipolar.o matrixlib.o meastereo.o
+	$(CC) $(CFLAGS) matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o meastereo.o main.o -o main $(CLIBS)
 
-main.o:main.c photojpeglib.h abmatching.h epipolar.h
+main.o:main.c photojpeglib.h abmatching.h epipolar.h meastereo.h
 	$(CC) $(CFLAGS) $(CSTD) -c main.c -o main.o
 
 photojpeglib.o:photojpeglib.c

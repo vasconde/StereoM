@@ -64,6 +64,11 @@ void oex_add_pfs (p_oex_pfs pfs, int n_pfs, double *terreno, double *foto);
 void oex_set_param (p_oex_param param, double Xo, double Yo, double Zo, double omega, double phi, double kappa, int opR);
 
 /*
+ * recolhe os parametros de orientacao externa
+ */
+void oex_get_param (p_oex_param param, double* Xo, double* Yo, double* Zo, double* omega, double* phi, double* kappa);
+
+/*
  * retorna as componetes Nx, Ny e D
  * das equacoes de colinearidade
  */

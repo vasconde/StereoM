@@ -20,6 +20,7 @@
 #include "photojpeglib.h"
 #include "oex.h"
 #include "epipolar.h"
+#include "meastereo.h"
 
 /*PRE PROCESSADOR*/
 #define DEBUG
@@ -764,6 +765,100 @@ double *correspondencia_auto (double *FM, int *n_homologos)
   return homologos;
 }
 
+/*
+ * Restituicao
+ */
+
+void restituicao (p_oex_param oex_param_l, p_oex_param oex_param_r,
+		  double n_homologos, double *homologos)
+{
+  int i; /*ciclos*/
+
+  p_ms_param_photo params_l, params_r;
+
+  FILE *foin;
+  double xo_l, yo_l, f_l;
+  double xo_r, yo_r, f_r;
+  
+  double Xo, Yo, Zo, omega, phi, kappa;
+
+  double meas1[2]; /*medicao na foto esquerda*/
+  double meas2[2]; /*medicao na foto direita*/
+  double res[3];   /*resultado para um ponto*/
+
+  double pixel_dim;
+
+  /*Verificar se todos os parametros*/
+  assert(oex_param_l != NULL && oex_param_r != NULL);
+  assert(n_homologos != 0 && homologos != NULL);
+
+  /*leitura dos parametros de orientacao interna - esquerda*/
+  foin = fopen(file_param_in_l, "r");
+  if (foin == NULL) printf("ERRO: Na leitura do ficheiro %s\n", file_param_in_l);
+  fscanf(foin, "%lf %lf %lf", &xo_l, &yo_l, &f_l); /*le do ficheiro*/
+  fclose(foin);
+
+  /*leitura dos parametros de orientacao interna - direita*/
+  foin = fopen(file_param_in_r, "r");
+  if (foin == NULL) printf("ERRO: Na leitura do ficheiro %s\n", file_param_in_l);
+  fscanf(foin, "%lf %lf %lf", &xo_r, &yo_r, &f_r); /*le do ficheiro*/
+  fclose(foin);
+
+  pixel_dim = 0.008 / f_l;
+
+  /*alocacao e atribuicao dos paramaetros*/
+
+  oex_get_param(oex_param_l, &Xo, &Yo, &Zo, &omega, &phi, &kappa);
+
+  /*temp*/
+  printf ("%lf %lf %lf %lf %lf %lf\n", Xo, Yo, Zo, omega, phi, kappa);
+  
+
+  params_l = ms_alocar_param_photo (xo_l*pixel_dim, 
+				    yo_l*pixel_dim, 
+				    f_l*pixel_dim, 
+				    Xo, Yo, Zo, 
+				    1, omega, phi, kappa);
+
+  oex_get_param(oex_param_r, &Xo, &Yo, &Zo, &omega, &phi, &kappa);  
+
+  /*temp*/
+  printf ("\n%lf %lf %lf %lf %lf %lf\n", Xo, Yo, Zo, omega, phi, kappa);
+
+
+  printf ("\n%lf %lf %lf %lf %lf %lf\n", xo_l, yo_l, f_l, xo_r, yo_r, f_r);
+
+
+  params_r = ms_alocar_param_photo (xo_r*pixel_dim, 
+				    yo_r*pixel_dim, 
+				    f_r*pixel_dim, 
+				    Xo, Yo, Zo, 
+				    1, omega, phi, kappa);
+
+  for(i = 0; i < n_homologos; i++)
+    {
+
+      meas1[0] = homologos[POS(i,1,5)] - xo_l;
+      meas1[1] = yo_l - homologos[POS(i,0,5)];
+
+      meas2[0] = homologos[POS(i,3,5)] - xo_r;
+      meas2[1] = yo_r - homologos[POS(i,2,5)];
+
+      ms_photo2terrain (params_l, meas1, 
+			params_r, meas2, res);
+
+      printf("\n %lf  %lf  %lf %lf \n", meas1[0], meas1[1], meas2[0], meas2[1]);
+      
+      /*temp*/
+      printf("\n%lf  %lf  %lf\n", res[0], res[1], res[2]);
+
+    }
+  
+  /*libertar memoria*/
+  ms_free_param_photo(params_l);
+  ms_free_param_photo(params_r);
+}
+
 /*TEMP*/
 void escreve_ascii (double *res, int n)
 {
@@ -887,7 +982,7 @@ int main (void)
 	  break;
 
 	case 5: /* 5. Restituicao  */
-
+	  restituicao (oex_param_l, oex_param_r, n_homologos, homologos);
 	  break;
 
 	case 6: /* 6. Sobre StereoM */
