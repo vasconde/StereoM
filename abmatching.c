@@ -13,6 +13,8 @@
 #include <assert.h> /*assert(codition)*/
 
 #include "photojpeglib.h"
+#include "epipolar.h"
+#include "matrixlib.h"
 
 #include "abmatching.h"
 
@@ -128,9 +130,12 @@ void abm_cross_correlation (unsigned char **im, int him, int wim, unsigned char 
  *        parametros da recta epipolar, intervalo em +/- em y,
  *        limite minimo em x e limite maximo em x da janela de procura
  */
-void abm_cross_correlation_epi (unsigned char **im, int him, int wim, 
-				unsigned char **t, int ht, int wt, 
-				double *epil, int ty, int x_min, int x_max)
+int abm_cross_correlation_epi (unsigned char **im, int him, int wim, 
+			       unsigned char **t, int ht, int wt, 
+			       double *FM, int *fl, 
+			       int ty, int x_min, int x_max,
+			       double cc_min, 
+			       int coo_final[], double *cc_final)
 {
   int i, j; /*ciclos*/
   int inicio_x, fim_x;
@@ -145,10 +150,21 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
 
   double y;               /*y da epipolar para um dado x*/
   int int_y;              /*o y anterior mas passado a inteiro*/
+
+  double epil[3]; /*parametros da recta epipolar*/
   
   /*garantir que os limites para x
     nao excedem a dimensao da imagem*/
   assert(x_min >= 0 && x_max <= wim);
+
+  /* calculo dos parametros da recta epipolar 
+   * atencao atencao para a epipolar n entra l,c mas c,l*/
+  ep_lepipolar (FM, fl[1], fl[0], &epil[0], &epil[1], &epil[2]);
+  
+#ifdef DEBUG
+  /*imprime os parametros*/
+  printf("\na = %lf\nb = %lf\nc = %lf\n",epil[0],epil[1],epil[2]);
+#endif /*DEBUG*/  
 
   /*define os limites da busca em x
     tendo em conta do tamanho do template*/
@@ -203,7 +219,81 @@ void abm_cross_correlation_epi (unsigned char **im, int him, int wim,
     }
 
   /*resultado*/
-  if (cc_max > 0.90)
-      printf("\nENCONTROU: cc = %lf\n          H: %d   W: %d\n", cc_max, coo_cc_max[0], coo_cc_max[1]);
+  if (cc_max > cc_min)
+    {
+      *cc_final = cc_max;
+      coo_final[0] = coo_cc_max[0];
+      coo_final[1] = coo_cc_max[1];
+      return 1;
+    }
+      
+  return 0;
+}
+
+/*
+ * DES:   Image matching restrigido ah epipolar para um janela
+ *        de matching limitada por x,y min e x,y max
+ * PARAM: imagem, h da imagem, w da imagem,
+ *        template, h do template, w do template,
+ *        parametros da recta epipolar, intervalo em +/- em y,
+ *        limite minimo em x e limite maximo em x da janela de procura
+ *
+ *        resultado:
+ *        |i_l |j_l | i_r | j_r | cc |
+ */
+int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
+				    unsigned char **imr, int himr, int wimr,
+				    int dim_template,
+				    double *FM, int ty, 
+				    int x_min, int x_max,
+				    int y_min, int y_max,
+				    double cc_min, 
+				    int *n, double *resultado)
+{
+  int i, j; /*ciclos*/
+
+  int k = 0; /*para viajar no resultado*/
+
+  int coo_r[2], coo_l[2];
+  double cc;
+
+  unsigned char **template; /*template*/
+
+  for(i = y_min; i <= y_max; i++)
+    for(j = x_min; j <= x_max; j++)
+      {
+	coo_l[0] = i; coo_l[1] = j;
+
+	/*geracao do template*/
+	template = abm_alocar_sub_matrix (iml, himl, wiml,
+					  coo_l[0]-dim_template, 
+					  coo_l[0]+dim_template, 
+					  coo_l[1]-dim_template, 
+					  coo_l[1]+dim_template);
+
+	if (abm_cross_correlation_epi(imr, himr, wimr, 
+				      template, 
+				      2*dim_template+1, 2*dim_template+1, 
+				      FM, coo_l, ty,
+				      x_min, x_max, cc_min, coo_r, &cc))
+	  {
+	    
+	    ml_set_entry_M(resultado, 5, k, 0, coo_l[0]);
+	    ml_set_entry_M(resultado, 5, k, 1, coo_l[1]);
+
+	    ml_set_entry_M(resultado, 5, k, 2, coo_r[0]);
+	    ml_set_entry_M(resultado, 5, k, 3, coo_r[1]);
+
+	    ml_set_entry_M(resultado, 5, k, 4, cc);
+	    	    
+	    k++;
+	  }
+	
+	abm_libertar_sub_matrix(template);
+      }
+
+  *n = k;
+  
+  return k != 0 ? 1 : 0;
 }
 

@@ -19,7 +19,7 @@ main.o:main.c photojpeglib.h abmatching.h epipolar.h
 photojpeglib.o:photojpeglib.c
 	$(CC) $(CFLAGS) $(CSTD) -c photojpeglib.c -o photojpeglib.o
 
-abmatching.o:abmatching.c photojpeglib.h
+abmatching.o:abmatching.c photojpeglib.h epipolar.h matrixlib.h
 	$(CC) $(CFLAGS) $(CSTD) -c abmatching.c -o abmatching.o
 
 # oex

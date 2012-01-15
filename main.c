@@ -450,8 +450,10 @@ void matriz_fundamental(double *FM)
 	  limite minimo da janela de procura em x
 	  limite maximo da janela de procura em x
  */
-int estereorestituicao_pontual (double *FM, char componente, int dim_template, 
-				int margem_y, int x_min, int x_max)
+int estereorestituicao_pontual (double *FM, char componente, 
+				int dim_template, 
+				int margem_y, 
+				int x_min, int x_max)
 {
   p_ph_photo foto_l = NULL;
   p_ph_photo foto_r = NULL;
@@ -459,11 +461,12 @@ int estereorestituicao_pontual (double *FM, char componente, int dim_template,
   int height_l, width_l; /*dimensoes da imagem esquerda*/
   int height_r, width_r; /*dimensoes da imagem direita*/
   
-  double epil[3]; /*parametros da recta epipolar*/
-  int fl [2];     /*coordenas foto do ponto a procurar*/
-  int ty = 3;
   
-  int i,j; /*para ciclos*/
+  int fl[2];      /*coordenas foto do ponto a procurar*/
+
+  int fr[2];      /*coordenadas foto do ponto encontrado*/
+  double cc;      /*coeficiente de corelacao final*/
+  
   
   unsigned char **template; /*template*/
   
@@ -487,15 +490,6 @@ int estereorestituicao_pontual (double *FM, char componente, int dim_template,
       return -1;
     }  
 
-  /*
-  printf("%d\n", ph_componente_photo (foto_r, 'R')[578][1263]);
-  printf("%d\n", ph_componente_photo (foto_r, 'R')[1027][1587]);
-  printf("%d\n", ph_componente_photo (foto_r, 'R')[751][363]);
-  printf("%d\n", ph_componente_photo (foto_r, 'R')[1195][1607]);
-  */
-
-  /*return -1;*/
-
   /*levantamento das dimensoes das imagens*/
   height_l = ph_height_photo(foto_l);
   width_l = ph_width_photo(foto_l); 
@@ -506,48 +500,106 @@ int estereorestituicao_pontual (double *FM, char componente, int dim_template,
   printf("Coordenadas imagem esqueda: ");
   scanf("%d %d", &fl[0], &fl[1]);
   
-  /* calculo dos parametros da recta epipolar 
-   * atencao atencao para a epipolar n entra l,c mas c,l*/
-  ep_lepipolar (FM, fl[1], fl[0], &epil[0], &epil[1], &epil[2]);
 
-#ifdef DEBUG
-  /*imprime os parametros*/
-  printf("\na = %lf\nb = %lf\nc = %lf\n",epil[0],epil[1],epil[2]);
-#endif /*DEBUG*/  
 
   /*geracao do template*/
   template = abm_alocar_sub_matrix (ph_componente_photo (foto_l, componente), 
-				  height_l, width_l, fl[0]-dim_template, fl[0]+dim_template, 
-				  fl[1]-dim_template, fl[1]+dim_template);
+				    height_l, width_l, fl[0]-dim_template, 
+				    fl[0]+dim_template, 
+				    fl[1]-dim_template, fl[1]+dim_template);
   
   /*cross correlation restringida pela epipolar*/
-  abm_cross_correlation_epi (ph_componente_photo (foto_r, componente), 
-			     height_r, width_r, 
-			     template, 2*dim_template+1, 2*dim_template+1, epil, 
-			     margem_y, x_min, x_max);
+  if (abm_cross_correlation_epi (ph_componente_photo (foto_r, componente), 
+				 height_r, width_r, 
+				 template, 
+				 2*dim_template+1, 2*dim_template+1, 
+				 FM, fl, 
+				 margem_y, x_min, x_max, 0.90,
+				 fr, &cc))    
+    printf("\nENCONTROU: cc = %lf\n          H: %d   W: %d\n", 
+	   cc, fr[0], fr[1]);
+  else
+    printf ("\nNAO ENCONTROU\n");
   
-
-  /*abm_cross_correlation (ph_componente_photo (foto1, 'R'), height, width, 
-    ph_componente_photo (template, 'R'), ph_height_photo(template), 
-    ph_width_photo(template));*/
-  
-  
-  /*
-    abm_cross_correlation_epi (ph_componente_photo (foto1, 'R'), height, width, 
-			     ph_componente_photo (template, 'R'), ph_height_photo(template), 
-			     ph_width_photo(template), 
-			     epil, ty);
-  */
-  
+  /*liberta a memoria alocada para as imagens*/
   ph_libertar_photo(foto_l);
   ph_libertar_photo(foto_r);
+
+  abm_libertar_sub_matrix(template);
   
   return 0;
 }
 
-void estereorestituicao_area ()
+/*
+ * DIS:   A procura eh feita para uma janela de procura
+ * PARAM: matriz fundamental; componente R,G,B; 
+          dimensao do template;
+          margem em y para a epipolar
+	  limite minimo da janela de procura em x
+	  limite maximo da janela de procura em x
+ */
+int estereorestituicao_area (double *FM, char componente, 
+			      int dim_template, 
+			      int margem_y, 
+			      int x_min, int x_max,
+			      int y_min, int y_max,
+			      double cc_min)
 {
+  /*resultado tem no maximo o numero de pixeis da janela de procura*/
+  double *resultado = ml_alocar_M ((x_max-x_min)*(y_max-y_min), 5);
+  int n = 0; /*numero de resultados*/
 
+  p_ph_photo foto_l = NULL;
+  p_ph_photo foto_r = NULL;
+  
+  int height_l, width_l; /*dimensoes da imagem esquerda*/
+  int height_r, width_r; /*dimensoes da imagem direita*/  
+
+  /*carregamento da imagem esquerda*/
+  foto_l = ph_read_jpeg_file(file_image_l);
+  if( foto_l != NULL ) 
+    printf("INFO: Processamento JPEG completo\n");
+  else
+    {
+      printf("FALHA: Processamento JPEG: %s\n", file_image_l);
+      return -1;
+    }
+
+  /*carregamento da imagem direita*/  
+  foto_r = ph_read_jpeg_file(file_image_r); 
+  if( foto_r != NULL ) 
+    printf("INFO: Processamento JPEG completo\n");
+  else
+    {
+      printf("FALHA: Processamento JPEG: %s\n", file_image_r);
+      return -1;
+    }  
+
+  /*levantamento das dimensoes das imagens*/
+  height_l = ph_height_photo(foto_l);
+  width_l = ph_width_photo(foto_l); 
+  height_r = ph_height_photo(foto_r);
+  width_r = ph_width_photo(foto_r);  
+
+  
+  /**/
+  if (abm_cross_correlation_epi_area (ph_componente_photo (foto_l, componente), 
+				      height_l, width_l,
+				      ph_componente_photo (foto_r, componente), 
+				      height_r, width_r,
+				      dim_template,
+				      FM, margem_y, 
+				      x_min, x_max,
+				      y_min, y_max,
+				      cc_min, 
+				      &n, resultado))
+    {
+      printf("\nEncontrou %d pontos homologos\n", n);
+    }
+
+  ml_free_M (resultado);
+
+  return 0;
 }
 
 /*
@@ -560,6 +612,8 @@ int estereorestituicao_auto (double *FM)
   int margem_y;     /*margem em y*/
   int dim_template; /*dimensao do template*/
   int x_min, x_max; /*limite minimo e maximo em x da janela de procura*/
+  int y_min, y_max; /*limite minimo e maximo em y da janela de procura*/
+  double cc_min;    /*valor minimo para o coeficiente de correlacao*/
 
   do
     {
@@ -581,7 +635,7 @@ int estereorestituicao_auto (double *FM)
 	  assert(comp == 'R' || comp == 'G' || comp == 'B');
 
 	  /* pede a dimensao do template*/
-	  printf("\nDimensao do template (ex. 10): "); 
+	  printf("\nDimensao do template (ex. 5): "); 
 	  __fpurge(stdin);               /*limpa o buffer*/
 	  scanf("%d", &dim_template);           
 	  assert(dim_template >= 0 && dim_template <= 30);
@@ -592,7 +646,7 @@ int estereorestituicao_auto (double *FM)
 	  scanf("%d", &margem_y);           
 	  assert(margem_y >= 0 && margem_y <= 30);
 
-	  /* pede a margem em y em torno da epipolar*/
+	  /* Limites para a janela de procura em x*/
 	  printf("\nLimite minimo da janela de procura em x (ex. 50): "); 
 	  __fpurge(stdin);               /*limpa o buffer*/
 	  scanf("%d", &x_min);
@@ -600,6 +654,7 @@ int estereorestituicao_auto (double *FM)
 	  __fpurge(stdin);               /*limpa o buffer*/
 	  scanf("%d", &x_max);
 	  assert(x_max > x_min);
+
 	}
 
       switch (p_or_a)
@@ -614,7 +669,23 @@ int estereorestituicao_auto (double *FM)
 	case 2:
 	  assert(FM != NULL); /*tem de existir matriz fundamental*/
 
-	  estereorestituicao_area();
+	  /* Limites para a janela de procura em y*/
+	  printf("\nLimite minimo da janela de procura em y (ex. 50): "); 
+	  __fpurge(stdin);               /*limpa o buffer*/
+	  scanf("%d", &y_min);
+	  printf("Limite maximo da janela de procura em y (ex. 100): ");
+	  __fpurge(stdin);               /*limpa o buffer*/
+	  scanf("%d", &y_max);
+	  assert(y_max > y_min);
+
+	  printf("\nLimite minimo para coeficiente de correlacao (ex. 0.95): ");
+	  __fpurge(stdin);               /*limpa o buffer*/
+	  scanf("%lf", &cc_min);
+	  assert(cc_min >= 0 && cc_min <= 1);
+	  
+	  estereorestituicao_area(FM, comp, dim_template, 
+				  margem_y, x_min, x_max, y_min, y_max,
+				  cc_min);
 
 	  break;
 	}
