@@ -15,6 +15,7 @@
 
 #include "meastereo.h"
 
+/*MACROS*/
 #define POSR(i,j) (j+i*3)
 #define POS(i,j,n) (j+i*n)
 

@@ -18,6 +18,8 @@
 
 #include "abmatching.h"
 
+/*MACROS*/
+#define POS(i,j,n) (j+i*n)
 
 double abm_media (unsigned char **im, int height, int width)
 {
@@ -245,8 +247,9 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 				    unsigned char **imr, int himr, int wimr,
 				    int dim_template,
 				    double *FM, int ty, 
-				    int x_min, int x_max,
-				    int y_min, int y_max,
+				    int x_min_l, int x_max_l,
+				    int y_min_l, int y_max_l,
+				    int x_min_r, int x_max_r,
 				    double cc_min, 
 				    int *n, double *resultado)
 {
@@ -259,8 +262,8 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 
   unsigned char **template; /*template*/
 
-  for(i = y_min; i <= y_max; i++)
-    for(j = x_min; j <= x_max; j++)
+  for(i = y_min_l; i <= y_max_l; i++)
+    for(j = x_min_l; j <= x_max_l; j++)
       {
 	coo_l[0] = i; coo_l[1] = j;
 
@@ -275,16 +278,16 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 				      template, 
 				      2*dim_template+1, 2*dim_template+1, 
 				      FM, coo_l, ty,
-				      x_min, x_max, cc_min, coo_r, &cc))
+				      x_min_r, x_max_r, cc_min, coo_r, &cc))
 	  {
-	    
-	    ml_set_entry_M(resultado, 5, k, 0, coo_l[0]);
-	    ml_set_entry_M(resultado, 5, k, 1, coo_l[1]);
 
-	    ml_set_entry_M(resultado, 5, k, 2, coo_r[0]);
-	    ml_set_entry_M(resultado, 5, k, 3, coo_r[1]);
+	    resultado[POS(k,0,5)] = coo_l[0];
+	    resultado[POS(k,1,5)] = coo_l[1];
 
-	    ml_set_entry_M(resultado, 5, k, 4, cc);
+	    resultado[POS(k,2,5)] = coo_r[0];
+	    resultado[POS(k,3,5)] = coo_r[1];
+
+	    resultado[POS(k,4,5)] = cc;
 	    	    
 	    k++;
 	  }

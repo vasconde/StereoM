@@ -27,6 +27,9 @@
 /*CONSTANTES*/
 #define MAX_FILE_NAME 75
 
+/*MACROS*/
+#define POS(i,j,n) (j+i*n)
+
 int op;
 
 /*
@@ -58,7 +61,7 @@ int info_oex_r[] = {1,0,1,0,1,0}; /*nome sim | em memoria nao | nome sim | em me
 /* MATRIZ FUNDAMENTAL */
 char file_l_c_i_l_c[MAX_FILE_NAME] = "dados/dados/matrix/left.txt"; /*file list coordinates image left common*/
 char file_l_c_i_r_c[MAX_FILE_NAME] = "dados/dados/matrix/right.txt"; /*file list coordinates image right common*/
-int l_c_i_c = 20; /*list coordinates image common*/
+int l_c_i_c = 22; /*list coordinates image common*/
 int info_fm[] = {1,0,1,0}; /*nome sim | em memoria nao | nome sim | carregado nao*/
 
 /* IMAGENS DIREITA E ESQUERDA  */
@@ -79,12 +82,13 @@ int display_main_menu ()
       printf(" 1. Ficheiros de dados\n");
       printf(" 2. Orientacao Externa\n");
       printf(" 3. Matriz Fundamental\n");
-      printf(" 4. Estereorestituicao automatica\n");
-      printf(" 5. Sobre StereoM\n");
-      printf(" 6. Sair\n");
+      printf(" 4. Correspondencia automatica\n");
+      printf(" 5. Restituicao\n");
+      printf(" 6. Sobre StereoM\n");
+      printf(" 7. Sair\n");
       printf("\nopcao: ");
       scanf("%d", &op);
-    } while (op < 1 || op > 6);
+    } while (op < 1 || op > 7);
 
   return op;
 }
@@ -450,25 +454,24 @@ void matriz_fundamental(double *FM)
 	  limite minimo da janela de procura em x
 	  limite maximo da janela de procura em x
  */
-int estereorestituicao_pontual (double *FM, char componente, 
-				int dim_template, 
-				int margem_y, 
-				int x_min, int x_max)
+int correspondencia_auto_pontual (int *fl, double *FM, char componente, 
+				  int dim_template, 
+				  int margem_y, 
+				  int x_min, int x_max,
+				  double *homologos, int *n_homologos)
 {
   p_ph_photo foto_l = NULL;
   p_ph_photo foto_r = NULL;
   
   int height_l, width_l; /*dimensoes da imagem esquerda*/
   int height_r, width_r; /*dimensoes da imagem direita*/
-  
-  
-  int fl[2];      /*coordenas foto do ponto a procurar*/
 
   int fr[2];      /*coordenadas foto do ponto encontrado*/
   double cc;      /*coeficiente de corelacao final*/
   
-  
   unsigned char **template; /*template*/
+
+
   
   /*carregamento da imagem esquerda*/
   foto_l = ph_read_jpeg_file(file_image_l);
@@ -496,9 +499,7 @@ int estereorestituicao_pontual (double *FM, char componente,
   height_r = ph_height_photo(foto_r);
   width_r = ph_width_photo(foto_r);  
 
-  /*pedido ao utilizador das coordenadas do ponto a procurar*/
-  printf("Coordenadas imagem esqueda: ");
-  scanf("%d %d", &fl[0], &fl[1]);
+
   
 
 
@@ -515,9 +516,24 @@ int estereorestituicao_pontual (double *FM, char componente,
 				 2*dim_template+1, 2*dim_template+1, 
 				 FM, fl, 
 				 margem_y, x_min, x_max, 0.90,
-				 fr, &cc))    
-    printf("\nENCONTROU: cc = %lf\n          H: %d   W: %d\n", 
-	   cc, fr[0], fr[1]);
+				 fr, &cc))
+    { 
+      
+
+      homologos[POS(0,0,5)] = fl[0];
+      homologos[POS(0,1,5)] = fl[1];
+
+      homologos[POS(0,2,5)] = fr[0];
+      homologos[POS(0,3,5)] = fr[1];
+
+      homologos[POS(0,4,5)] = cc;
+
+      *n_homologos = 1;
+
+      printf("\nENCONTROU: cc = %lf\n          H: %d   W: %d\n", 
+	     cc, fr[0], fr[1]);
+    }
+
   else
     printf ("\nNAO ENCONTROU\n");
   
@@ -530,6 +546,7 @@ int estereorestituicao_pontual (double *FM, char componente,
   return 0;
 }
 
+
 /*
  * DIS:   A procura eh feita para uma janela de procura
  * PARAM: matriz fundamental; componente R,G,B; 
@@ -538,16 +555,15 @@ int estereorestituicao_pontual (double *FM, char componente,
 	  limite minimo da janela de procura em x
 	  limite maximo da janela de procura em x
  */
-int estereorestituicao_area (double *FM, char componente, 
-			      int dim_template, 
-			      int margem_y, 
-			      int x_min, int x_max,
-			      int y_min, int y_max,
-			      double cc_min)
+int correspondencia_auto_area (double *FM, char componente, 
+			       int dim_template, 
+			       int margem_y, 
+			       int x_min_l, int x_max_l,
+			       int y_min_l, int y_max_l,
+			       int x_min_r, int x_max_r,
+			       double cc_min,
+			       double *homologos, int *n_homologos)
 {
-  /*resultado tem no maximo o numero de pixeis da janela de procura*/
-  double *resultado = ml_alocar_M ((x_max-x_min)*(y_max-y_min), 5);
-  int n = 0; /*numero de resultados*/
 
   p_ph_photo foto_l = NULL;
   p_ph_photo foto_r = NULL;
@@ -581,6 +597,7 @@ int estereorestituicao_area (double *FM, char componente,
   height_r = ph_height_photo(foto_r);
   width_r = ph_width_photo(foto_r);  
 
+
   
   /**/
   if (abm_cross_correlation_epi_area (ph_componente_photo (foto_l, componente), 
@@ -589,31 +606,40 @@ int estereorestituicao_area (double *FM, char componente,
 				      height_r, width_r,
 				      dim_template,
 				      FM, margem_y, 
-				      x_min, x_max,
-				      y_min, y_max,
+				      x_min_l, x_max_l,
+				      y_min_l, y_max_l,
+				      x_min_r, x_max_r,
 				      cc_min, 
-				      &n, resultado))
+				      n_homologos, homologos))
     {
-      printf("\nEncontrou %d pontos homologos\n", n);
+      printf("\nEncontrou %d pontos homologos\n", *n_homologos);
     }
 
-  ml_free_M (resultado);
+
+
 
   return 0;
 }
 
+
+
 /*
  *
  */
-int estereorestituicao_auto (double *FM)
+double *correspondencia_auto (double *FM, int *n_homologos)
 {
   int p_or_a;       /*pontual - 1 | area - 2*/
   char comp;        /*R, G, B*/
   int margem_y;     /*margem em y*/
   int dim_template; /*dimensao do template*/
-  int x_min, x_max; /*limite minimo e maximo em x da janela de procura*/
-  int y_min, y_max; /*limite minimo e maximo em y da janela de procura*/
+  int x_min_l, x_max_l; /*limite minimo e maximo em x da janela de procura*/
+  int y_min_l, y_max_l; /*limite minimo e maximo em y da janela de procura*/
+  int x_min_r, x_max_r;
   double cc_min;    /*valor minimo para o coeficiente de correlacao*/
+
+  double *homologos = NULL;
+
+  int fl[2];
 
   do
     {
@@ -649,11 +675,11 @@ int estereorestituicao_auto (double *FM)
 	  /* Limites para a janela de procura em x*/
 	  printf("\nLimite minimo da janela de procura em x (ex. 50): "); 
 	  __fpurge(stdin);               /*limpa o buffer*/
-	  scanf("%d", &x_min);
+	  scanf("%d", &x_min_r);
 	  printf("Limite maximo da janela de procura em x (ex. 100): ");
 	  __fpurge(stdin);               /*limpa o buffer*/
-	  scanf("%d", &x_max);
-	  assert(x_max > x_min);
+	  scanf("%d", &x_max_r);
+	  assert(x_max_r > x_min_r);
 
 	}
 
@@ -662,38 +688,103 @@ int estereorestituicao_auto (double *FM)
 	case 1:
 	  assert(FM != NULL); /*tem de existir matriz fundamental*/
 
-	  estereorestituicao_pontual (FM, comp, dim_template, 
-				      margem_y, x_min, x_max);
+	  /*pedido ao utilizador das coordenadas do ponto a procurar*/
+	  printf("\nCoordenadas imagem esqueda (h w): ");
+	  scanf("%d %d", &fl[0], &fl[1]);
+
+	  /*alocacao de memoria para guradar resultado*/
+	  if (homologos == NULL)
+	    {
+	      homologos = ml_alocar_M(1, 5);
+	      *n_homologos = 0;
+	    }
+	  else
+	    {
+	      ml_free_M(homologos);
+	      homologos = ml_alocar_M(1, 5);
+	      *n_homologos = 0;
+	    }
+
+	  correspondencia_auto_pontual (fl, FM, comp, dim_template, 
+					margem_y, x_min_r, x_max_r,
+					homologos, n_homologos);
+
+
 
 	  break;
 	case 2:
 	  assert(FM != NULL); /*tem de existir matriz fundamental*/
 
+	  /* Limites para a janela de procura em x*/
+	  printf("\nLimite minimo em x (ex. 50): "); 
+	  __fpurge(stdin);               /*limpa o buffer*/
+	  scanf("%d", &x_min_l);
+	  printf("Limite maximo x (ex. 100): ");
+	  __fpurge(stdin);               /*limpa o buffer*/
+	  scanf("%d", &x_max_l);
+	  assert(x_max_l > x_min_l);
+
 	  /* Limites para a janela de procura em y*/
-	  printf("\nLimite minimo da janela de procura em y (ex. 50): "); 
+	  printf("\nLimite minimo em y (ex. 50): "); 
 	  __fpurge(stdin);               /*limpa o buffer*/
-	  scanf("%d", &y_min);
-	  printf("Limite maximo da janela de procura em y (ex. 100): ");
+	  scanf("%d", &y_min_l);
+	  printf("Limite maximo y (ex. 100): ");
 	  __fpurge(stdin);               /*limpa o buffer*/
-	  scanf("%d", &y_max);
-	  assert(y_max > y_min);
+	  scanf("%d", &y_max_l);
+	  assert(y_max_l > y_min_l);
 
 	  printf("\nLimite minimo para coeficiente de correlacao (ex. 0.95): ");
 	  __fpurge(stdin);               /*limpa o buffer*/
 	  scanf("%lf", &cc_min);
 	  assert(cc_min >= 0 && cc_min <= 1);
+
+	  /*alocacao de memoria para guradar resultado*/
+	  if (homologos == NULL)
+	    homologos = ml_alocar_M ((x_max_l-x_min_l)*(y_max_l-y_min_l), 5);
+	  else
+	    {
+	      ml_free_M(homologos);
+	      homologos = ml_alocar_M ((x_max_l-x_min_l)*(y_max_l-y_min_l), 5);
+	    }
 	  
-	  estereorestituicao_area(FM, comp, dim_template, 
-				  margem_y, x_min, x_max, y_min, y_max,
-				  cc_min);
+	  correspondencia_auto_area(FM, comp, dim_template, 
+				    margem_y, x_min_l, x_max_l, 
+				    y_min_l, y_max_l,
+				    x_min_r, x_max_r,
+				    cc_min,
+				    homologos, n_homologos);
+
+	  
 
 	  break;
 	}
 
     } while (p_or_a != 3);
 
-  return 0;
+  return homologos;
 }
+
+/*TEMP*/
+void escreve_ascii (double *res, int n)
+{
+  int i;
+  
+  FILE *f = fopen("res.txt", "w");
+
+  for(i = 0; i < n; i++)
+    {
+      fprintf(f, "%6.1lf  %6.1lf  %6.1lf  %6.1lf  %6.3lf\n", 
+	      res[POS(i,0,5)],
+	      res[POS(i,1,5)],
+	      res[POS(i,2,5)],
+	      res[POS(i,3,5)],
+	      res[POS(i,4,5)]);
+    }
+  
+  fclose(f);
+}
+
+/* MAIN */
 
 int main (void)
 {
@@ -707,6 +798,11 @@ int main (void)
   /*orientacoes para a foto da direita*/
   p_oex_oin_param oin_param_r = NULL;
   p_oex_param oex_param_r = NULL;
+
+  /*lista das coordenadas dos pontos homologos detctados*/
+  double *homologos = NULL;
+  int n_homologos = 0;
+
 
   do
     {
@@ -760,7 +856,8 @@ int main (void)
 
 	case 3: /* 3. Matriz Fundamental */
 
-	  if (FM == NULL) FM = ml_alocar_M (3, 3); /* alocagem */
+	  if (FM == NULL) 
+	    FM = ml_alocar_M (3, 3); /* alocagem */
 
 	  matriz_fundamental(FM); /*calculo da matriz fundamental*/
 
@@ -772,19 +869,35 @@ int main (void)
 
 	  break;
 
-	case 4: /* 4. Estereorestituicao automatica */
+	case 4: /* 4. Correspondencia automatica */
 
-	  estereorestituicao_auto (FM);
+	  /*para o caso deste passo ja ter sido executado antes*/
+	  if (homologos != NULL) 
+	    {
+	      ml_free_M(homologos);
+	      n_homologos = 0;
+	    }
+
+	  homologos = correspondencia_auto (FM, &n_homologos);
+
+#ifdef DEBUG
+	  escreve_ascii (homologos, n_homologos);
+#endif /*DEBUG*/
+
 	  break;
 
-	case 5: /* 5. Sobre StereoM */
+	case 5: /* 5. Restituicao  */
+
+	  break;
+
+	case 6: /* 6. Sobre StereoM */
 	  
 	  sobre_stereom ();
 	  break;
 
 	}
 
-    } while (op != 6);
+    } while (op != 7);
 
   /*Libertacao de memoria*/
 
@@ -794,6 +907,8 @@ int main (void)
   if (oex_param_r != NULL) oex_libertar_param (oex_param_r);
   if (FM != NULL) free(FM);
   
+  if (homologos != NULL) ml_free_M(homologos);
 
+  /* fim */
   return 0;
 }

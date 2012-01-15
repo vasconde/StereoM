@@ -37,8 +37,9 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 				    unsigned char **imr, int himr, int wimr,
 				    int dim_template,
 				    double *FM, int ty, 
-				    int x_min, int x_max,
-				    int y_min, int y_max,
+				    int x_min_l, int x_max_l,
+				    int y_min_l, int y_max_l,
+				    int x_min_r, int x_max_r,
 				    double cc_min, 
 				    int *n, double *resultado);
 
