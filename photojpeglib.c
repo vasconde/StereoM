@@ -1,5 +1,6 @@
 /*
  * Implementacao da PHOTOJPEGLIB
+ * Des: Modulo para operar sobre imagens no formato JPEG.
  * Nome: photojpeglib.c
  * Autor: vasco conde
  */
@@ -14,6 +15,7 @@
 
 #include "photojpeglib.h"
 
+/*Estrutra*/
 struct ph_photo
 {
   int height;
@@ -31,6 +33,12 @@ struct ph_par_photo
   p_ph_photo photo2;
 };
 
+/* 
+ * descomprecao da imagem para uma estrutura ph_photo 
+ * Parametros: caminho para ficheiro imagem JPEG
+ * Retorno: Estrutura ph_photo preenchida com as tres componetes
+ * RGB
+ */
 p_ph_photo ph_read_jpeg_file(char *filename)
 {
   unsigned char *raw_image = NULL; /* ponteiro para a imagem descompressa R,G,B,R,G,B... */
@@ -169,6 +177,8 @@ unsigned char **ph_libertar_m (int h, int w, unsigned char **img)
   return (NULL); /* retorna um ponteiro nulo */
 }
 
+/*gestao de memoria*/
+
 p_ph_photo ph_alocar_photo (int height, int width)
 {
   p_ph_photo photo_alocada = (p_ph_photo)malloc(sizeof(struct ph_photo));
@@ -236,6 +246,8 @@ unsigned char **ph_componente_photo (p_ph_photo photo, char nome_comp)
 }
 
 
+/*retorna algumas caracteristicas da photo*/
+
 int ph_height_photo (p_ph_photo photo)
 {
   return photo->height;
@@ -246,6 +258,7 @@ int ph_width_photo (p_ph_photo photo)
   return photo->width;
 }
 
+/*imprime num ficheiro de texto a os valores de intensidade da imagem*/
 void ph_img_ascii (char *filename, unsigned char **img, int height, int width)
 {
   FILE *cR = fopen(filename, "w"); /* temp */

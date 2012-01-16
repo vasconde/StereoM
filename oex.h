@@ -2,30 +2,46 @@
  * Interface da OEX
  * Nome: oex.h
  * Autor: vasco conde
+ * 
+ * Des: Conjunto de metodos para a determinacao dos parametros
+ * de orientacao externa de uma imagem utilizando um ajustamento por minimos
+ * quadrados e o modelo das equacoes de colinearidade
  *
  */
 
 #ifndef _OEX
 #define _OEX
 
+/*Ponteiro para estrutura para albergar 
+ *os parametros de o. interna*/
 typedef struct oex_oin_param *p_oex_oin_param;
 
+/*Ponteiro para estrutura para albergar 
+ *os parametros de o. externa*/
 typedef struct oex_param *p_oex_param;
 
+/* Ponteiro para estrutura para albergar as listas
+ * de coordenadas dos pfs 
+ * no espaco terreno e imagem */
 typedef struct oex_pfs *p_oex_pfs;
 
 
-/** TEMPORARIAS **/
+/** IO **/
 
+/*mostrar matriz na consola*/
 void oex_showm (double *M, int m, int n);
 
+/*carregar matriz a partir de um ficheiro*/
 void oex_readm (char *nfile, double *M, int m, int n);
-
-/** TEMPORARIAS  **/
 
 /*carrega as coordenadas de uma lista ascii para uma matriz*/
 void oex_carrega_coo(double *coo, int dim, char *nfile, char tipo);
 
+/** FIM IO  **/
+
+/** GESTAO DE MEMORIA 
+ * o proprio nome eh suficiente para descrever a sua funcao
+ **/
 p_oex_oin_param oex_alocar_oin_param ();
 
 p_oex_param oex_alocar_param ();
@@ -37,6 +53,8 @@ void oex_libertar_oin_param (p_oex_oin_param e);
 void oex_libertar_param (p_oex_param e);
 
 void oex_libertar_pfs (p_oex_pfs e);
+
+/*FIM GESTAO DA MEMORIA*/
 
 /* 
  * Calcula a matriz de rotacao 
@@ -108,8 +126,16 @@ double oex_norm_M (double *M, int m, int n);
  */
 void oex_transfotopfs (p_oex_oin_param oin_param, p_oex_pfs pfs);
 
+/*escreve num ficheiro de texto a matriz M*/
 void oex_M_ascii (char *filename, double *M, int m, int n);
 
+/*
+ * Calcula os parametros de orientacao externa recorrendo a um ajustamento por 
+ * minimos quadrados.
+ * Parametros: numero de pfs, parametros de orientacao interna, 
+ * parametros de orientacao externa, pfs
+ * retorno: parametros de orientacao externa
+ */
 void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs pfs);
 
 #endif

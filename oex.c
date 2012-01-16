@@ -3,20 +3,21 @@
  * Nome: oex.c
  * Autor: vasco conde
  *
- * Description: Conjunto de metodos para a determinacao dos parametros
- * de orientacao externa de uma imagem utilizado um ajustamento por minimos
+ * Des: Conjunto de metodos para a determinacao dos parametros
+ * de orientacao externa de uma imagem utilizando um ajustamento por minimos
  * quadrados e o modelo das equacoes de colinearidade
  */
 
 /*
  * BIBLIOTECAS AUXILIARES
  */
-#include <stdio.h>   /* c padrao */
-#include <stdlib.h>  /* c padrao */
-#include <math.h>   /* c padrao */
-/*#include <cblas.h>*/   /* c BLAS   */
-#include "matrixlib.h"
+/* c padrao */
+#include <stdio.h>   
+#include <stdlib.h>
+#include <math.h>  
 
+/*StereoM*/
+#include "matrixlib.h"
 #include "oex.h"
 
 /*Estrutura para albergar 
@@ -48,7 +49,7 @@ struct oex_pfs
   double *foto;
 };
 
-/*** TEMPORARIAS ***/
+/*** IO ***/
 
 /* escrever no ecra a matriz M */
 void oex_showm (double *M, int m, int n)
@@ -74,6 +75,7 @@ void oex_readm (char *nfile, double *M, int m, int n)
       fscanf(f,"%lf", &M[k++]);
   fclose(f);
 }
+
 
 /*carrega as coordenadas de uma lista ascii para uma matriz*/
 void oex_carrega_coo(double *coo, int dim, char *nfile, char tipo)
@@ -102,6 +104,9 @@ void oex_carrega_coo(double *coo, int dim, char *nfile, char tipo)
   fclose(f);
 }
 
+/*** FIM IO ***/
+
+/*** GESTAO DA MEMORIA ***/
 
 p_oex_oin_param oex_alocar_oin_param ()
 {
@@ -121,8 +126,6 @@ p_oex_pfs oex_alocar_pfs ()
   return novo;
 }
 
-/* REVISAO */
-
 void oex_libertar_oin_param (p_oex_oin_param e)
 {
   free(e);
@@ -138,6 +141,8 @@ void oex_libertar_pfs (p_oex_pfs e)
 {
   free(e);
 }
+
+/***FIM GESTAO DE MEMORIA ***/
 
 /* 
  * Calcula a matriz de rotacao 
@@ -414,6 +419,7 @@ void oex_transfotopfs (p_oex_oin_param oin_param, p_oex_pfs pfs)
     }
 }
 
+/*escreve num ficheiro de texto a matriz M*/
 void oex_M_ascii (char *filename, double *M, int m, int n)
 {
   FILE *cR = fopen(filename, "w"); /* temp */
@@ -434,25 +440,17 @@ void oex_M_ascii (char *filename, double *M, int m, int n)
 }
 
 /*
- * Calculo
+ * Calcula os parametros de orientacao externa recorrendo a um ajustamento por 
+ * minimos quadrados.
+ * Parametros: numero de pfs, parametros de orientacao interna, 
+ * parametros de orientacao externa, pfs
+ * retorno: parametros de orientacao externa
  */
 void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs pfs)
 {
-  /*
-   * Definicao de variaveis
-   * Alocacao de memoria
-   */
-  /*const int n = 14;*/              /* Numero de PFS 1/2 de observacoes */
-  /* char * ffoto = "dados/pfs_f.txt";
-     char * fterreno = "dados/pfs_t.txt"; */
-
-  /*
-  char * ffoto = "dados/par/limpres/pfs_fr.txt";
-  char * fterreno = "dados/par/limpres/pfs_tr.txt";
-  */
 
   int n0 = 3;              /* numero de PFS minimo */
-  int df = n*2 - n0*2;
+  int df = n*2 - n0*2;     /* numero de graus de liberdade */
   int u = 6;               /* numero de parametros */
   int it = 0;              /* numero de iteracoes */
   int i;
@@ -467,61 +465,36 @@ void oex_compute (int n, p_oex_oin_param oin_param, p_oex_param param, p_oex_pfs
   double res_norma;
   double res_media;
 
-  /*double d2r = (4.0*atan(1.0))/180;*/
-
-  double *L = ml_alocar_M(n * 2, 1);
-  double *V = ml_alocar_M(n * 2, 1);
-  double *X = ml_alocar_M(u, 1);
-  double *Cl = ml_alocar_M_I (n * 2);
-  double *Pl = ml_alocar_M (n * 2, n * 2);
-  double *A = ml_alocar_M (n * 2, u);
-  double *W = ml_alocar_M(n * 2, 1);
-  double *D = ml_alocar_M(u, 1);
-  double *Cx = ml_alocar_M(u, u);
-  double *InvN = ml_alocar_M(u, u);
-  double *Aux = ml_alocar_M(u, n * 2);
+  /*alocacao das matrizes utilizadas*/
+  double *L = ml_alocar_M(n * 2, 1);       /*observacoes*/
+  double *V = ml_alocar_M(n * 2, 1);       /*residuos*/
+  double *X = ml_alocar_M(u, 1);           /*parametros a ajustar*/
+  double *Cl = ml_alocar_M_I (n * 2);      /*V&C das observacoes*/
+  double *Pl = ml_alocar_M (n * 2, n * 2); /*Pesos das observacoes*/
+  double *A = ml_alocar_M (n * 2, u);      /*matriz de configuracao*/
+  double *W = ml_alocar_M(n * 2, 1);       /*matriz de fecho*/
+  double *D = ml_alocar_M(u, 1);           /*correccoes aos parametros - delta*/
+  double *Cx = ml_alocar_M(u, u);          /*V&C dos parametros*/
+  double *InvN = ml_alocar_M(u, u);        /*Inversa da matriz das eq normais*/
+  double *Aux = ml_alocar_M(u, n * 2);     /*auxiliares...*/
   double *Aux2 = ml_alocar_M(u, n * 2);
   double *Aux3 = ml_alocar_M(u, 1);
   double *Aux4 = ml_alocar_M(n * 2, 1);
   double *Aux5 = ml_alocar_M(1, n * 2);
   
-  /*
-  p_oex_oin_param oin_param = oex_alocar_oin_param ();
-  p_oex_param param = oex_alocar_param ();
-  p_oex_pfs pfs = oex_alocar_pfs ();
-  */
-  /*
-  double terreno[n*3];
-  double foto[n*2];
-  */
-
-  /*Pl = var inv(Cl)*/
-
-  /*
-   * Carregar dados
-   */
-  /*oex_add_oin_param (oin_param, (2527.01371+2515.01405)/2.0, 1041.17490, 782.66840);*/
-  /*  
-oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 1043.777785082072114, 782.329224502696547);
-
-  oex_add_param (param, 3, 1, 9, 0.0, 0.0, 0.0, 1);
-  
-  oex_carrega_coo(terreno, n*3, fterreno, 't');
-  oex_carrega_coo(foto, n*2, ffoto, 'f');
-
-  oex_add_pfs (pfs, n, terreno, foto);
-  */
+  /*passa as coordenadas imagem dos pfs
+   *para o sistema centrado no centro da imagem*/
   oex_transfotopfs (oin_param, pfs);
 
   /*
    * Ajustamento
    */
-
   /*definicao dos pesos*/
   ml_AeqB (Pl, Cl, n*2, n*2); /*Pl = Cl*/
   ml_invM(Pl, n*2);           /*Pl = inv(Pl)*/
   ml_aM (var0, Pl, n*2, n*2); /*Pl = var*Pl*/
 
+  /*Passa para X a aproximacao inicial aos parametros*/
   oex_param2X (param, X);
 
   do {
@@ -582,6 +555,11 @@ oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 104
     }
   printf("\nINFO: Residuos:\n\n");
   
+  /*
+   * Calcula e apresenta na consola
+   * os residuos para cada pf e a norma do residuo
+   * calcula a media
+   */
   for(i=0, k = 1, res_media = 0; i < n*2; i++)
     {
       if(i%2 == 0)
@@ -619,10 +597,6 @@ oex_add_oin_param (oin_param, (2524.980712085470259+2512.961041523109998)/2, 104
 
   printf("\nINFO: variancia de referencia a posteriori: %lf \n", var0_);
   
-  /*oex_showm(V, n*2, 1);*/
-
-  /*oex_showm (Pl, n*2, n*3);*/
-
   /*
    * Libertar memoria
    */

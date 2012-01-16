@@ -6,15 +6,15 @@ CSTD = -ansi
 CFLAGS = -Wall -g 
 CLIBS = -lm -ljpeg -lblas -llapack
 
-all:main
+all:stereom
 
 # stereom
 
-main:abmatching.o photojpeglib.o main.o oex.o epipolar.o matrixlib.o meastereo.o
-	$(CC) $(CFLAGS) matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o meastereo.o main.o -o main $(CLIBS)
+stereom:abmatching.o photojpeglib.o stereom.o oex.o epipolar.o matrixlib.o meastereo.o
+	$(CC) $(CFLAGS) matrixlib.o abmatching.o photojpeglib.o oex.o epipolar.o meastereo.o stereom.o -o stereom $(CLIBS)
 
-main.o:main.c photojpeglib.h abmatching.h epipolar.h meastereo.h
-	$(CC) $(CFLAGS) $(CSTD) -c main.c -o main.o
+stereom.o:stereom.c photojpeglib.h abmatching.h epipolar.h meastereo.h
+	$(CC) $(CFLAGS) $(CSTD) -c stereom.c -o stereom.o
 
 photojpeglib.o:photojpeglib.c
 	$(CC) $(CFLAGS) $(CSTD) -c photojpeglib.c -o photojpeglib.o
@@ -48,4 +48,4 @@ clean:
 	rm -rf *.o
 
 mrproper:clean
-	rm -rf main
+	rm -rf stereom

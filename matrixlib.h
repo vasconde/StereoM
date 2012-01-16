@@ -91,6 +91,10 @@ void ml_aM (double a, double *M, int m, int n);
  */
 void ml_AmmB (int op, double *A, double *B, int m, int n, double *C);
 
+/*
+ * Decomposição em valores singulares
+ * SVD(A) = U D V
+ */
 void ml_svd(double* Ain, int ma, int na, double* Uin, double* S, double* Vtin);
 
 #endif

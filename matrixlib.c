@@ -213,6 +213,11 @@ void ml_AmmB (int op, double *A, double *B, int m, int n, double *C)
       C[i] = A[i] - B[i];
 }
 
+/*
+ * Decomposição em valores singulares
+ * SVD(A) = U D V
+ */
+
 void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, 
 	     double* U, int* LDU, double *VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
 

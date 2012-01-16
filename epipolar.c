@@ -3,19 +3,23 @@
  * Nome: epipolar.c
  * Autor: vasco conde
  *
- * Description: Conjunto de metodos para a determinacao dos parametros
+ * Des: Conjunto de metodos para a determinacao
+ * da matriz fundamental e dos parametros
  * da recta epipolar
  */
 
 /*
  * BIBLIOTECAS AUXILIARES
  */
-#include <stdio.h>   /* c padrao */
-#include <stdlib.h>  /* c padrao */
+/*c padrao*/
+#include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
+/*stereom*/
 #include "matrixlib.h"
 
+/*MACRO*/
 #define POS(i,j,n) (j+i*n)
 
 /*passa para a memoria a matriz de um ficheiro ascii*/
@@ -31,6 +35,14 @@ void ep_readm (char *nfile, double *M, int m, int n)
   fclose(f);
 }
 
+/* Calculo da matriz fundamental
+ *
+ * Entrada: numero de pontos homologos, 
+ * coordenadas imagem dos pontos da imagem esquerda,
+ * coordenadas imagem dos pontos da imagem direita,
+ * matriz fundamental (vazia)
+ * saida: matriz fundamental
+ */
 void ep_fundamentalMatrix (int np, double* left, double* right, double* FM)
 {
   int i; /*ciclo for*/
@@ -53,6 +65,8 @@ void ep_fundamentalMatrix (int np, double* left, double* right, double* FM)
 
   double x1, y1, x2, y2;
   
+  /*Algoritmo dos 8 pontos*/
+
   for(i = 0; i < np; i++)
     {
       x1 = left[POS(i,0,2)];
@@ -101,6 +115,12 @@ void ep_fundamentalMatrix (int np, double* left, double* right, double* FM)
   ml_free_M (FSn);  
 }
 
+/*
+ * Determinacao dos parametros da recta epipolar
+ * Entrada: Matriz fundamental, coordenadas imagem de um
+ * ponto na imagem esquerda, ponteiros para os parametros da recta
+ * saida: parametros a,b e c da recta epipolar na imagem direita
+ */
 void ep_lepipolar (double* FM, double xl, double yl, double* a, double* b, double* c)
 {
     double *Pl = ml_alocar_M (3, 1);
@@ -119,44 +139,3 @@ void ep_lepipolar (double* FM, double xl, double yl, double* a, double* b, doubl
     ml_free_M (Pl);
     ml_free_M (u);
 }
-
-/*
-int main (void)
-{
-  int i, j;
-  int np = 12;
-
-  double *left = ml_alocar_M (np, 2);
-  double *right = ml_alocar_M (np, 2);
-  double *FM = ml_alocar_M (3, 3);
-  double a, b, c;
-  double xl, yl;
-
-  ep_readm ("dados/epipolar/left.txt", left, np, 2);
-  ep_readm ("dados/epipolar/right.txt", right, np, 2);
-
-  ep_fundamentalMatrix (np, left, right, FM);
-
-  xl = 1745;
-  yl = 694;
-
-  ep_lepipolar (FM, xl, yl, &a, &b, &c);
-
-  printf("a = %lf;\nb = %lf;\nc = %lf;\n", a, b, c);
-
-  printf("FM---------------------\n");
-  for(i=0; i < 3; i++)
-    {
-      for(j=0; j < 3; j++)
-	printf("%lf ", FM[POS(i,j,3)]);
-      printf("\n");
-    }
-
-
-  ml_free_M (left);
-  ml_free_M (right);
-  ml_free_M (FM);
-  
-  return 0;
-}
-*/

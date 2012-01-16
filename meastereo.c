@@ -2,15 +2,23 @@
  * Implementacao da MAEASTEREO
  * Nome: maeastereo.c
  * Autor: vasco conde
+ *
+ * Des: Modulo dedicado ah determinacao de 
+ * coordenadas objecto a partir de coordenadas
+ * imagem de pontos homologos em pares de imagens
+ * em condicoes de estereoscopia a partir das equacoes
+ * de colinearida.
  */
 
 /*
  * BIBLIOTECAS AUXILIARES
  */
-#include <stdio.h>   /* c padrao */
-#include <stdlib.h>  /* c padrao */
-#include <math.h>    /* c padrao */
+/* c padrao */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
+/*stereom*/
 #include "matrixlib.h"
 
 #include "meastereo.h"
@@ -19,16 +27,25 @@
 #define POSR(i,j) (j+i*3)
 #define POS(i,j,n) (j+i*n)
 
+
+/* estrutura de dados para parametros 
+ * de orientacao interna e externa
+ */
 struct ms_param_photo {
   double x, y, f;     /** orientacao interna **/
-  double X, Y, Z;  /** orientacao externa **/
+  
+  /** orientacao externa **/
+  double X, Y, Z;     
   double omega, phi, kappa;
-  int op; /*1 = opk; 2 = pok*/
+  
+  /*matriz de rotacao*/
+  int op; /*1 = omega phi kappa; 2 = pok*/
   double *R;
 };
 
-/*
- * Gestao de memoria
+
+/* alocacao de memoria para 
+ * a estrutura dos parametros
  */
 p_ms_param_photo ms_alocar_param_photo (double x, double y, double f, 
 					double X, double Y, double Z, int op,
@@ -56,6 +73,9 @@ p_ms_param_photo ms_alocar_param_photo (double x, double y, double f,
   return param;
 }
 
+/*libertacao de memoria para 
+ *a estrutura dos parametros
+ */
 void ms_free_param_photo (p_ms_param_photo param)
 {
   free(param->R);
@@ -110,7 +130,10 @@ void ms_M_rot (int op, double *R, double omega, double phi, double kappa)
 }
 
 
-
+/* Determina o valor do numerador (Nx ou Ny)
+ * ou denominador (D) das equacoes de 
+ * colinearida
+ */
 double ms_ND(int op, p_ms_param_photo ph, double* meas)
 {
   switch(op)
@@ -127,6 +150,9 @@ double ms_ND(int op, p_ms_param_photo ph, double* meas)
     }
 }
 
+/* Determina valor de Nx/D ou Ny/D
+ * das equacoes de colinearidade
+ */
 double ms_kxy(int op, p_ms_param_photo ph, double* meas)
 {
   switch (op)
@@ -140,7 +166,11 @@ double ms_kxy(int op, p_ms_param_photo ph, double* meas)
     }
 }
 
-/*transicao*/
+/* Determina uma primeira aproximacao para as coordenadas
+ * objecto, para utilizacao no ajustamento
+ * entrada: parametros e coordenadas imagem
+ * saida: 1a aproximacao as coordenadas terreno
+ */
 void ms_firstAprox (p_ms_param_photo ph1, double* meas1, 
 		    p_ms_param_photo ph2, double* meas2, double* res)
 {
@@ -165,9 +195,17 @@ void ms_firstAprox (p_ms_param_photo ph1, double* meas1,
   res[2] = Z;  
 }
 
-
+/* Determinacao das coordenadas objecto de um ponto medido
+ * em duas imagens recorrendo a um ajustamento por minimos
+ * quadrados das equacoes de colinearidade
+ * Entrada: parametros de orientacao da imagem 1 e coordenadas
+ * imagem do ponto na imagem 1;
+ * parametros de orientacao da imagem 2 e coordenadas
+ * imagem do ponto na imagem 2;
+ * ponteiro para receber a proposta
+ */
 void ms_photo2terrain (p_ms_param_photo ph1, double* meas1, 
-		    p_ms_param_photo ph2, double* meas2, double* res)
+		       p_ms_param_photo ph2, double* meas2, double* res)
 {
   int i;
   double var0 = 1;
@@ -175,7 +213,7 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
   /*primeira aproximacao aos parametros*/
   ms_firstAprox (ph1, meas1, ph2, meas2, res);
 
-  /*passa para vector*/
+  /*passa param para vector*/
   double *param = ml_alocar_M (3, 1);
 
   param[POS(0, 0, 1)] = res[0];
@@ -197,8 +235,10 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
   double *Pesos_inv = ml_alocar_M (6, 6); 
   double *Cl = ml_alocar_M_I(6);
 
+  /*primeira matriz de configuracao df/dx*/
   double *A = ml_alocar_M (4, 3);
 
+  /*segunda matriz de configuracao df/dl*/
   double *B = ml_alocar_M (4, 6);
 
   /* Vector de fecho */
@@ -207,8 +247,7 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
   /* vector das correcoes */
   double *delta = ml_alocar_M (3, 1);
 
-  /* Matrizes */
-  double *A_t = ml_alocar_M (3, 4);
+  double *A_t = ml_alocar_M (3, 4); 
   double *B_t = ml_alocar_M (6, 4);
 
   double *M = ml_alocar_M (4, 4);
@@ -224,24 +263,55 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
 
 
   /* ciclo */
-  /* Matriz A */
 
   i = 0;
   do
     {
-      A[POS(0, 0, 3)] = -1; A[POS(0, 1, 3)] = 0; A[POS(0, 2, 3)] = ms_kxy(1, ph1, meas1);
-      A[POS(1, 0, 3)] = 0; A[POS(1, 1, 3)] = -1; A[POS(1, 2, 3)] = ms_kxy(2, ph1, meas1);
+      /* Matriz A */
 
-      A[POS(2, 0, 3)] = -1; A[POS(2, 1, 3)] = 0; A[POS(2, 2, 3)] = ms_kxy(1, ph2, meas2);
-      A[POS(3, 0, 3)] = 0; A[POS(3, 1, 3)] = -1; A[POS(3, 2, 3)] = ms_kxy(2, ph2, meas2);
+      A[POS(0, 0, 3)] = -1; 
+      A[POS(0, 1, 3)] = 0; 
+      A[POS(0, 2, 3)] = ms_kxy(1, ph1, meas1);
+      A[POS(1, 0, 3)] = 0; 
+      A[POS(1, 1, 3)] = -1; 
+      A[POS(1, 2, 3)] = ms_kxy(2, ph1, meas1);
+
+      A[POS(2, 0, 3)] = -1; 
+      A[POS(2, 1, 3)] = 0; 
+      A[POS(2, 2, 3)] = ms_kxy(1, ph2, meas2);
+      A[POS(3, 0, 3)] = 0; 
+      A[POS(3, 1, 3)] = -1; 
+      A[POS(3, 2, 3)] = ms_kxy(2, ph2, meas2);
 
       /* Matriz B */
 
-      B[POS(0, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(0, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(0, 2, 6)] = 0.0; B[POS(0, 3, 6)] = 0.0; B[POS(0, 4, 6)] = 0.0; B[POS(0, 5, 6)] = 0.0;
-      B[POS(1, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(1, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); B[POS(1, 2, 6)] = 0.0; B[POS(1, 3, 6)] = 0.0; B[POS(1, 4, 6)] = 0.0; B[POS(1, 5, 6)] = 0.0;
+      B[POS(0, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); 
+      B[POS(0, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(0, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(1, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); 
+      B[POS(0, 2, 6)] = 0.0; 
+      B[POS(0, 3, 6)] = 0.0; 
+      B[POS(0, 4, 6)] = 0.0; 
+      B[POS(0, 5, 6)] = 0.0;
+      
+      B[POS(1, 0, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 0)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 0)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); 
+      B[POS(1, 1, 6)] = (param[POS(2, 0, 1)] - ph1->Z) * (ph1->R[POSR(1, 1)] * ms_ND(3, ph1, meas1) - ph1->R[POSR(2, 1)] * ms_ND(2, ph1, meas1)) / pow(ms_ND(3, ph1, meas1), 2); 
+      B[POS(1, 2, 6)] = 0.0; 
+      B[POS(1, 3, 6)] = 0.0; 
+      B[POS(1, 4, 6)] = 0.0; 
+      B[POS(1, 5, 6)] = 0.0;
 
-      B[POS(2, 0, 6)] = 0.0; B[POS(2, 1, 6)] = 0.0; B[POS(2, 2, 6)] = 0.0; B[POS(2, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(2, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(2, 5, 6)] = 0.0;
-      B[POS(3, 0, 6)] = 0.0; B[POS(3, 1, 6)] = 0.0; B[POS(3, 2, 6)] = 0.0; B[POS(3, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(3, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); B[POS(3, 5, 6)] = 0.0;
+      B[POS(2, 0, 6)] = 0.0; 
+      B[POS(2, 1, 6)] = 0.0; 
+      B[POS(2, 2, 6)] = 0.0; 
+      B[POS(2, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); 
+      B[POS(2, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(0, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(1, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); 
+      B[POS(2, 5, 6)] = 0.0;
+      
+      B[POS(3, 0, 6)] = 0.0; 
+      B[POS(3, 1, 6)] = 0.0; 
+      B[POS(3, 2, 6)] = 0.0; 
+      B[POS(3, 3, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 0)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 0)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); 
+      B[POS(3, 4, 6)] = (param[POS(2, 0, 1)] - ph2->Z) * (ph2->R[POSR(1, 1)] * ms_ND(3, ph2, meas2) - ph2->R[POSR(2, 1)] * ms_ND(2, ph2, meas2)) / pow(ms_ND(3, ph2, meas2), 2); 
+      B[POS(3, 5, 6)] = 0.0;
 
       /* vector de fecho */
       fecho[POS(0, 0, 1)] = ph1->X + (param[POS(2, 0, 1)] - ph1->Z) * ms_kxy(1, ph1, meas1) - param[POS(0, 0, 1)];
@@ -251,38 +321,13 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
 
 
       /*definicao dos pesos*/
-      ml_AeqB (Pesos, Cl, 6, 6); /*Pl = Cl*/
+      ml_AeqB (Pesos, Cl, 6, 6);   /*Pl = Cl*/
       ml_invM(Pesos, 6);           /*Pl = inv(Pl)*/
-      ml_aM (var0, Pesos, 6, 6); /*Pl = var*Pl*/
-
-      /*
-                B_t = B.Clone();
-                B_t.Transpose();
-                A_t = A.Clone();
-                A_t.Transpose();
-
-                //correcções aos parametros dx, dy, dz
-
-
-
-                Pesos_inv = Pesos.Inverse(); //
-      */
-
-      /*
-	Aux, 4 6
-	Aux2 3 4
-	Aux3 3 4
-	Aux4 3 1
-       */
+      ml_aM (var0, Pesos, 6, 6);   /*Pl = var*Pl*/
 
       /*Inversao de Pl*/
       ml_AeqB (Pesos_inv, Pesos, 6, 6);
       ml_invM(Pesos_inv, 6);
-
-      /*
-	M = B * Pesos_inv * B_t;
-	M_inv = M.Inverse();
-      */
 
       /*M = B inv(Pl) * B' */
       ml_ABtt (B, 4, 6, 0, Pesos_inv, 6, 6, 0, Aux);
@@ -292,8 +337,6 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
       ml_AeqB (M_inv, M, 4, 4);
       ml_invM (M_inv, 4);
 
-      
-
       /*N = A_t * M_inv * A;*/
       ml_ABtt (A, 4, 3, 1, M_inv, 4, 4, 0, Aux2);
       ml_ABtt (Aux2, 3, 4, 0, A, 4, 3, 0, N);
@@ -302,10 +345,6 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
       ml_AeqB (N_inv, N, 3, 3);
       ml_invM (N_inv, 3);
 
-      /*
-                delta = (-1 * N_inv) * A_t;
-                delta = delta * M_inv * fecho;
-      */
       ml_aM (-1.0, N_inv, 3, 3);
       ml_ABtt (/*-*/N_inv, 3, 3, 0, A, 4, 3, 1, Aux2);
       ml_ABtt (Aux2, 3, 4, 0, M_inv, 4, 4, 0, Aux3);
@@ -325,12 +364,13 @@ void ms_photo2terrain (p_ms_param_photo ph1, double* meas1,
   res[1] = param[1];
   res[2] = param[2];
   
+  /*
   printf("%d\n", i);
   printf("M = %lf\n", res[0]);
   printf("P = %lf\n", res[1]);
   printf("H = %lf\n", res[2]);
-  
-  /*return res;*/
+  */  
+
   
   ml_free_M (param);
   ml_free_M (l);

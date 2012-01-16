@@ -2,25 +2,39 @@
  * Implementacao da ABMATCHING
  * Nome: abmatching.c
  * Autor: vasco conde
+ *
+ * Des: Modulo dedicado ah correspondecia automatica
+ * de imagens, utilizando o algoritmo de correspondecia
+ * automatica de imagens baseado na area 
+ * e com restricao definida pela recta epipolar
  */
 
 /*
  * BIBLIOTECAS AUXILIARES
  */
-#include <stdio.h>   /* c padrao */
-#include <stdlib.h>  /* c padrao */
+/*c padrao*/
+#include <stdio.h> 
+#include <stdlib.h>
 #include <math.h>
 #include <assert.h> /*assert(codition)*/
 
+/*stereom*/
 #include "photojpeglib.h"
 #include "epipolar.h"
 #include "matrixlib.h"
 
 #include "abmatching.h"
 
-/*MACROS*/
+/*MACRO*/
 #define POS(i,j,n) (j+i*n)
 
+/*#define DEBUG*/
+
+/* Calculo da media dos valor de intensidade de uma imagem 
+ * ou sub imagem
+ * entrada: matriz de valores de intensidade, altura e comprimento
+ * saida: media
+ */
 double abm_media (unsigned char **im, int height, int width)
 {
   int i, j;
@@ -37,6 +51,11 @@ double abm_media (unsigned char **im, int height, int width)
   return media;
 }
 
+/* Calculo do desvio padrao dos valor de intensidade de uma imagem 
+ * ou sub imagem
+ * entrada: matriz de valores de intensidade, altura e comprimento
+ * saida: desvio padrao
+ */
 double abm_desvio_padrao (unsigned char **im, int height, int width)
 {
   int i, j;
@@ -57,6 +76,13 @@ double abm_desvio_padrao (unsigned char **im, int height, int width)
   return despad;
 }
 
+/* Calculo da covariancia entre os valor de intensidade de duas imagem 
+ * ou sub imagens
+ * entrada: matriz de valores de intensidade im1,
+ * matriz de valores de intensidade im2,
+ * altura e comprimento
+ * saida: covariancia
+ */
 double abm_covariancia (unsigned char **im1, unsigned char **im2, int height, int width)
 {
   int i, j;
@@ -75,6 +101,14 @@ double abm_covariancia (unsigned char **im1, unsigned char **im2, int height, in
   return cov;
 }
 
+/* Calculo do coeficiente de correlacao entre 
+ * os valor de intensidade de duas imagem 
+ * ou sub imagens
+ * entrada: matriz de valores de intensidade im1,
+ * matriz de valores de intensidade im2,
+ * altura e comprimento
+ * saida: coeficiente de correlacao
+ */
 double abm_coef_correlacao (unsigned char **im1, unsigned char **im2, int height, int width)
 {
   double despad1, despad2;
@@ -88,6 +122,12 @@ double abm_coef_correlacao (unsigned char **im1, unsigned char **im2, int height
   return cov / (despad1 * despad2);
 }
 
+/* Retorna uma sub imagem de uma imagem maior
+ * entrada: matriz de valores de intensidade,
+ * altura e comprimento dessa matriz,
+ * localizacao do inicio e fim da sub matriz
+ * saida: sub matriz
+ */
 unsigned char **abm_alocar_sub_matrix (unsigned char **m, int height, int width, int hi, int hf, int wi, int wf)
 {
   int i;
@@ -100,11 +140,19 @@ unsigned char **abm_alocar_sub_matrix (unsigned char **m, int height, int width,
   return sub;
 }
 
+/* liberta memoria alocada para a submatriz */
 void abm_libertar_sub_matrix (unsigned char **sub)
 {
   free(sub);
 }
 
+/* Procura numa imagem (im) o template (t) 
+ * atraves de toda a imagem (im)
+ * Entrada: imagem, template e
+ * respectivas dimensoes
+ * Saida: apresentacao na consola dos 
+ * pontos e respctivo cc se for superior a 0.99
+ */
 void abm_cross_correlation (unsigned char **im, int him, int wim, unsigned char **t, int ht, int wt)
 {
   int i, j;
@@ -129,8 +177,15 @@ void abm_cross_correlation (unsigned char **im, int him, int wim, unsigned char 
  * DES:   Image matching restrigido ah epipolar
  * PARAM: imagem, h da imagem, w da imagem,
  *        template, h do template, w do template,
- *        parametros da recta epipolar, intervalo em +/- em y,
- *        limite minimo em x e limite maximo em x da janela de procura
+ *        matriz fundamenta, coo do ponto a procurar,
+ *        (im esquerda), margem em y (epi), limite
+ *        minimo e maximo para a janela de procura,
+ *        coeficiente de correlacao minimo,
+ *        array para guardar coordenadas resultado,
+ *        e ponteiro para cc respectivo
+ * SAIDA: Retorna 1 se detectou alguma correspondecia
+ *        0 em caso contrario, o resultado fica
+ *        guardado nas variaveis com esse destino
  */
 int abm_cross_correlation_epi (unsigned char **im, int him, int wim, 
 			       unsigned char **t, int ht, int wt, 
@@ -148,7 +203,7 @@ int abm_cross_correlation_epi (unsigned char **im, int him, int wim,
 
   double cc;              /*coeficiente de correlacao instatantaneo*/
   double cc_max = 0;      /*coeficiente de correlacao maximo*/
-  int coo_cc_max[2];   /*coordenadas do cc maximo*/
+  int coo_cc_max[2];      /*coordenadas do cc maximo*/
 
   double y;               /*y da epipolar para um dado x*/
   int int_y;              /*o y anterior mas passado a inteiro*/
@@ -233,12 +288,20 @@ int abm_cross_correlation_epi (unsigned char **im, int him, int wim,
 }
 
 /*
- * DES:   Image matching restrigido ah epipolar para um janela
- *        de matching limitada por x,y min e x,y max
- * PARAM: imagem, h da imagem, w da imagem,
- *        template, h do template, w do template,
- *        parametros da recta epipolar, intervalo em +/- em y,
- *        limite minimo em x e limite maximo em x da janela de procura
+ * DES:   Image matching restrigido ah epipolar que procura
+ *        todos os pontos homologos para uma area dada
+ * PARAM: imagem esquerda e respectivas dimensoes
+ *        imagem direita e respectivas dimensoes
+ *        dimensao do template, matriz fundamenta,
+ *        margem para y (epi), limites para a janela
+ *        para a qual se vao procurar os pontos homologos
+ *        (esquerda), limites em x para a janela de procura
+ *        (direita), coeficiente de correlacao minimo,
+ *        ponteiro para numero de pontos homologos detectados,
+ *        ponteiro para resultado.
+ * SAIDA: retorna 1 se detectar algum ponto homologo e o
+ *        resultado fica armazenado nas variaveis para isso
+ *        destinadas
  *
  *        resultado:
  *        |i_l |j_l | i_r | j_r | cc |
@@ -274,6 +337,7 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 					  coo_l[1]-dim_template, 
 					  coo_l[1]+dim_template);
 
+	/*se detectou um ponto homologo armazena no resultado*/
 	if (abm_cross_correlation_epi(imr, himr, wimr, 
 				      template, 
 				      2*dim_template+1, 2*dim_template+1, 
@@ -292,11 +356,15 @@ int abm_cross_correlation_epi_area (unsigned char **iml, int himl, int wiml,
 	    k++;
 	  }
 	
+	/*liberta template*/
 	abm_libertar_sub_matrix(template);
       }
 
-  *n = k;
+  *n = k; /*numero de pontos detectados*/
   
+  /**testa se detectou algum homologo
+   * em caso afirmativo retorna 1 caso contrario
+   * retorna 0*/
   return k != 0 ? 1 : 0;
 }
 
