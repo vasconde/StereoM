@@ -838,11 +838,11 @@ void restituicao (p_oex_param oex_param_l, p_oex_param oex_param_r,
   for(i = 0; i < n_homologos; i++)
     {
 
-      meas1[0] = homologos[POS(i,1,5)] - xo_l;
-      meas1[1] = yo_l - homologos[POS(i,0,5)];
+      meas1[0] = (homologos[POS(i,1,5)] - xo_l) * pixel_dim;
+      meas1[1] = (yo_l - homologos[POS(i,0,5)]) * pixel_dim;
 
-      meas2[0] = homologos[POS(i,3,5)] - xo_r;
-      meas2[1] = yo_r - homologos[POS(i,2,5)];
+      meas2[0] = (homologos[POS(i,3,5)] - xo_r) * pixel_dim;
+      meas2[1] = (yo_r - homologos[POS(i,2,5)]) * pixel_dim;
 
       ms_photo2terrain (params_l, meas1, 
 			params_r, meas2, res);
